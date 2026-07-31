@@ -10,15 +10,15 @@ public class BrandingOptions
 {
     public const string SectionName = "Branding";
 
-    public string ProductName { get; set; } = "OppSignal";
+    public string ProductName { get; set; } = "ContractCanary";
     public string Tagline { get; set; } = "Never miss a federal contract again.";
-    public string SupportEmail { get; set; } = "support@oppsignal.example";
-    public string FromName { get; set; } = "OppSignal";
-    public string FromEmail { get; set; } = "digests@oppsignal.example";
+    public string SupportEmail { get; set; } = "support@contract-canary.com";
+    public string FromName { get; set; } = "ContractCanary";
+    public string FromEmail { get; set; } = "digests@contract-canary.com";
 
     /// <summary>Public base URL of the web app, used to build links in emails.</summary>
     public string WebBaseUrl { get; set; } = "http://localhost:5173";
 
-    public string CompanyLegalName { get; set; } = "OppSignal, Inc.";
+    public string CompanyLegalName { get; set; } = "Contract Canary";
     public string BrandColor { get; set; } = "#1d4ed8";
 }

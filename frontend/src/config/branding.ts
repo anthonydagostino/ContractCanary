@@ -5,11 +5,11 @@
 // product name directly.
 // ─────────────────────────────────────────────────────────────────────────────
 export const branding = {
-  productName: 'OppSignal',
+  productName: 'ContractCanary',
   tagline: 'Never miss a federal contract again.',
   description:
-    'OppSignal turns free public procurement data into a daily, personalized signal — so small government contractors never miss a relevant opportunity again.',
-  supportEmail: 'support@oppsignal.example',
+    'ContractCanary turns free public procurement data into a daily, personalized signal — so small government contractors never miss a relevant opportunity again.',
+  supportEmail: 'support@contract-canary.com',
   // Marketing one-liners used on the landing page.
   hero: {
     eyebrow: 'Federal contract intelligence for small business',

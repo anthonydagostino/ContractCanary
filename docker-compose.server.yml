@@ -1,0 +1,119 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ContractCanary — single-box production stack (no external database needed).
+#
+# Everything on ONE server: Postgres (with a saved volume) + api + worker + Caddy,
+# which serves your domain and auto-provisions a real HTTPS certificate.
+#
+#   cp .env.server.example .env      # set SITE_ADDRESS + JWT_SIGNING_KEY (+ optional keys)
+#   docker compose -f docker-compose.server.yml up -d --build
+#
+# Starts in Fixture mode (fake data) so it comes up with no other accounts; flip
+# INGEST_SOURCE=Sam, EMAIL_PROVIDER=Postmark, and the Stripe keys in .env when ready.
+# ─────────────────────────────────────────────────────────────────────────────
+name: contractcanary
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: contractcanary
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-changeme_local_db_password}"
+      POSTGRES_DB: contractcanary
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U contractcanary -d contractcanary"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:-changeme_local_db_password}"
+      Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env (openssl rand -base64 48)}"
+      Branding__WebBaseUrl: "https://${SITE_ADDRESS}"
+      Cors__Origins__0: "https://${SITE_ADDRESS}"
+      # Data source: Fixture (fake) by default; set INGEST_SOURCE=Sam + SAM_API_KEY for real data.
+      Ingest__Source: "${INGEST_SOURCE:-Fixture}"
+      Sam__ApiKey: "${SAM_API_KEY:-}"
+      # Email: Dev (writes to /app/maildrop) by default; set EMAIL_PROVIDER=Postmark + token to send.
+      Email__Provider: "${EMAIL_PROVIDER:-Dev}"
+      Email__DevDropPath: "/app/maildrop"
+      Email__FromEmail: "${EMAIL_FROM_EMAIL:-digests@contract-canary.com}"
+      Email__FromName: "${BRANDING_PRODUCT_NAME:-ContractCanary}"
+      Email__Postmark__ServerToken: "${POSTMARK_SERVER_TOKEN:-}"
+      # Stripe: blank = billing shows "not configured"; fill in to enable subscriptions.
+      Stripe__SecretKey: "${STRIPE_SECRET_KEY:-}"
+      Stripe__PublishableKey: "${STRIPE_PUBLISHABLE_KEY:-}"
+      Stripe__WebhookSecret: "${STRIPE_WEBHOOK_SECRET:-}"
+      Stripe__StarterPriceId: "${STRIPE_STARTER_PRICE_ID:-}"
+      Stripe__ProPriceId: "${STRIPE_PRO_PRICE_ID:-}"
+      Stripe__SuccessUrl: "https://${SITE_ADDRESS}/app/settings?checkout=success"
+      Stripe__CancelUrl: "https://${SITE_ADDRESS}/app/settings?checkout=cancel"
+      Stripe__PortalReturnUrl: "https://${SITE_ADDRESS}/app/settings"
+      Branding__ProductName: "${BRANDING_PRODUCT_NAME:-ContractCanary}"
+      Branding__SupportEmail: "${BRANDING_SUPPORT_EMAIL:-support@contract-canary.com}"
+      # Seed the demo user/data only while in Fixture mode; set SEED_DEMO=false for real launch.
+      Seed__Demo: "${SEED_DEMO:-true}"
+    volumes:
+      - maildrop:/app/maildrop
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      DOTNET_ENVIRONMENT: "Production"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:-changeme_local_db_password}"
+      Ingest__Source: "${INGEST_SOURCE:-Fixture}"
+      Ingest__IntervalMinutes: "${INGEST_INTERVAL_MINUTES:-180}"
+      Sam__ApiKey: "${SAM_API_KEY:-}"
+      Email__Provider: "${EMAIL_PROVIDER:-Dev}"
+      Email__DevDropPath: "/app/maildrop"
+      Email__FromEmail: "${EMAIL_FROM_EMAIL:-digests@contract-canary.com}"
+      Email__FromName: "${BRANDING_PRODUCT_NAME:-ContractCanary}"
+      Email__Postmark__ServerToken: "${POSTMARK_SERVER_TOKEN:-}"
+      Digest__SendHourLocal: "${DIGEST_SEND_HOUR_LOCAL:-7}"
+      Branding__ProductName: "${BRANDING_PRODUCT_NAME:-ContractCanary}"
+      Branding__SupportEmail: "${BRANDING_SUPPORT_EMAIL:-support@contract-canary.com}"
+      Branding__WebBaseUrl: "https://${SITE_ADDRESS}"
+    volumes:
+      - maildrop:/app/maildrop
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    depends_on:
+      - api
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS}"
+      API_UPSTREAM: "api:8080"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data     # persists the TLS certificate across restarts
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  maildrop:
+  caddy_data:
+  caddy_config:
