@@ -76,3 +76,22 @@ senior engineer / founder made autonomously so the build could keep moving.
 
 16. **CSV export (Pro) is generated server-side** from the same filtered query the
     dashboard uses, streamed as `text/csv`, and gated by `PlanPolicy.CanExportCsv`.
+
+17. **Fixture notice dates are anchored to "today".** The 600-notice corpus is
+    spread over the last ~45 days relative to the clock's current date (stable
+    within a day, keyed by date). This keeps the recent-window ingest always
+    populated and makes the demo feel live ("posted today"). Trade-off: notices'
+    posted dates drift day-over-day, so a notice can appear "updated" on a later
+    day — harmless (dedup prevents duplicate matches / double-notify).
+
+18. **Profile backfill matches are pre-marked notified.** When a profile is
+    created/edited, existing-notice matches are (re)built with `NotifiedAt=now` so
+    the backlog is immediately browsable in the dashboard but is NOT blasted out
+    as a giant first digest. Only genuinely-new matches from scheduled ingest
+    (`NotifiedAt=null`) go into the daily email.
+
+19. **Integration tests: Testcontainers by default, env-Postgres fallback.** The
+    fixture spins `postgres:16-alpine` via Testcontainers (the user's Docker
+    environment). If `TEST_POSTGRES_ADMIN` is set it instead provisions a fresh
+    uniquely-named database on that server — so the suite runs in CI/sandboxes
+    where pulling the image is blocked. Documented in README.
