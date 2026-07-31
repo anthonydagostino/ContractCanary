@@ -1,0 +1,136 @@
+import { Link, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useNoticeDetail, useToggleSaved } from '../../hooks/queries'
+import { Badge, PageLoader, EmptyState, StarButton } from '../../components/ui'
+import { deadlineLabel, formatDate, formatDateTime } from '../../lib/format'
+
+export function OpportunityDetail() {
+  const { noticeId } = useParams()
+  const { data: n, isLoading } = useNoticeDetail(noticeId)
+  const toggle = useToggleSaved()
+  const [note, setNote] = useState('')
+  const [noteOpen, setNoteOpen] = useState(false)
+
+  if (isLoading) return <PageLoader />
+  if (!n) return <EmptyState title="Opportunity not found" action={<Link to="/app" className="btn-secondary">Back to opportunities</Link>} />
+
+  const dl = deadlineLabel(n.responseDeadline)
+
+  function save() {
+    toggle.mutate({ noticeId: n!.noticeId, save: !n!.isSaved, note: note || n!.savedNote })
+    setNoteOpen(false)
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl">
+      <Link to="/app" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        Opportunities
+      </Link>
+
+      <div className="card p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="mb-2 flex flex-wrap gap-2">
+              <Badge tone="indigo">{n.typeLabel}</Badge>
+              {n.setAside !== 'None' && n.setAsideLabel && <Badge tone="green">{n.setAsideLabel}</Badge>}
+              <Badge tone={dl.tone}>{dl.text}</Badge>
+              {!n.isActive && <Badge tone="gray">Inactive</Badge>}
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{n.title}</h1>
+            <p className="mt-1 text-sm text-slate-500">{n.agencyPath}</p>
+          </div>
+          <StarButton className="flex-none" saved={n.isSaved} onClick={() => (n.isSaved ? save() : setNoteOpen(true))} />
+        </div>
+
+        {noteOpen && (
+          <div className="mt-4 rounded-lg border border-slate-200 p-3">
+            <label className="label">Add a note (optional)</label>
+            <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Good fit — draft response by Friday" />
+            <div className="mt-2 flex gap-2">
+              <button className="btn-primary" onClick={save}>Save opportunity</button>
+              <button className="btn-ghost" onClick={() => setNoteOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <Field label="Solicitation #" value={n.solicitationNumber} mono />
+          <Field label="NAICS" value={n.naicsCode} mono />
+          <Field label="PSC" value={n.pscCode} mono />
+          <Field label="Posted" value={formatDate(n.postedDate)} />
+          <Field label="Response deadline" value={formatDateTime(n.responseDeadline)} />
+          <Field label="Archive date" value={formatDate(n.archiveDate)} />
+          <Field label="Place of performance" value={[n.popCity, n.popState, n.popZip].filter(Boolean).join(', ')} />
+          <Field label="Set-aside" value={n.setAsideDescription} />
+        </div>
+
+        {(n.primaryContactName || n.primaryContactEmail) && (
+          <div className="mt-6 rounded-lg bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Point of contact</p>
+            <p className="mt-1 text-sm text-slate-800">{n.primaryContactName}</p>
+            {n.primaryContactEmail && <a href={`mailto:${n.primaryContactEmail}`} className="text-sm text-brand-700 hover:underline">{n.primaryContactEmail}</a>}
+            {n.primaryContactPhone && <p className="text-sm text-slate-600">{n.primaryContactPhone}</p>}
+          </div>
+        )}
+
+        {n.description && (
+          <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Description</p>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">{n.description}</p>
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-2">
+          {n.uiLink && <a href={n.uiLink} target="_blank" rel="noreferrer" className="btn-primary">View on SAM.gov ↗</a>}
+          {!n.isSaved && <button className="btn-secondary" onClick={() => setNoteOpen(true)}>Save opportunity</button>}
+        </div>
+      </div>
+
+      {n.matchedProfiles.length > 0 && (
+        <div className="card mt-6 p-6">
+          <p className="text-sm font-semibold text-slate-900">Why this matched</p>
+          <div className="mt-3 space-y-3">
+            {n.matchedProfiles.map((m) => (
+              <MatchReason key={m.profileId} name={m.profileName} reason={m.matchReason} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Field({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className={'mt-0.5 text-sm text-slate-800 ' + (mono ? 'font-mono' : '')}>{value || '—'}</p>
+    </div>
+  )
+}
+
+function MatchReason({ name, reason }: { name: string; reason?: string }) {
+  let parsed: Record<string, unknown> | null = null
+  try { parsed = reason ? JSON.parse(reason) : null } catch { /* ignore */ }
+  const chips: string[] = []
+  if (parsed) {
+    if (parsed.matchedNaics) chips.push(`NAICS ${parsed.matchedNaics}`)
+    if (parsed.matchedPsc) chips.push(`PSC ${parsed.matchedPsc}`)
+    if (Array.isArray(parsed.matchedKeywords)) chips.push(...(parsed.matchedKeywords as string[]).map((k) => `“${k}”`))
+    if (parsed.matchedAgencyPath) chips.push(String(parsed.matchedAgencyPath))
+    if (parsed.matchedSetAside) chips.push(String(parsed.matchedSetAside))
+    if (parsed.matchedState) chips.push(String(parsed.matchedState))
+    if (parsed.matchedNoticeType) chips.push(String(parsed.matchedNoticeType))
+  }
+  return (
+    <div className="rounded-lg border border-slate-200 p-3">
+      <p className="text-sm font-medium text-slate-800">{name}</p>
+      {chips.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {chips.map((c, i) => <Badge key={i} tone="blue">{c}</Badge>)}
+        </div>
+      )}
+    </div>
+  )
+}
