@@ -1,0 +1,106 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# OppSignal — production stack. Deployment artifact for a Docker + Portainer host.
+#
+#   cp .env.example .env   # fill it in (see HUMAN_TODO.md)
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# The database is EXTERNAL (AWS RDS) via CONNECTIONSTRINGS_POSTGRES — no Postgres
+# container here. Caddy provisions TLS for SITE_ADDRESS automatically. The api
+# container applies migrations + seeds reference data on start.
+# ─────────────────────────────────────────────────────────────────────────────
+name: oppsignal
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file: [.env]
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ConnectionStrings__Postgres: "${CONNECTIONSTRINGS_POSTGRES}"
+      Jwt__SigningKey: "${JWT_SIGNING_KEY}"
+      Ingest__Source: "${INGEST_SOURCE:-Sam}"
+      Ingest__WindowDays: "${INGEST_WINDOW_DAYS:-3}"
+      Sam__ApiKey: "${SAM_API_KEY}"
+      Sam__BaseUrl: "${SAM_BASE_URL:-https://api.sam.gov}"
+      Email__Provider: "${EMAIL_PROVIDER:-Postmark}"
+      Email__FromEmail: "${EMAIL_FROM_EMAIL}"
+      Email__FromName: "${EMAIL_FROM_NAME:-OppSignal}"
+      Email__Postmark__ServerToken: "${POSTMARK_SERVER_TOKEN}"
+      Email__Postmark__MessageStream: "${POSTMARK_MESSAGE_STREAM:-outbound}"
+      Stripe__SecretKey: "${STRIPE_SECRET_KEY}"
+      Stripe__PublishableKey: "${STRIPE_PUBLISHABLE_KEY}"
+      Stripe__WebhookSecret: "${STRIPE_WEBHOOK_SECRET}"
+      Stripe__StarterPriceId: "${STRIPE_STARTER_PRICE_ID}"
+      Stripe__ProPriceId: "${STRIPE_PRO_PRICE_ID}"
+      Stripe__SuccessUrl: "${STRIPE_SUCCESS_URL}"
+      Stripe__CancelUrl: "${STRIPE_CANCEL_URL}"
+      Stripe__PortalReturnUrl: "${STRIPE_PORTAL_RETURN_URL}"
+      Branding__ProductName: "${BRANDING_PRODUCT_NAME:-OppSignal}"
+      Branding__Tagline: "${BRANDING_TAGLINE:-Never miss a federal contract again.}"
+      Branding__SupportEmail: "${BRANDING_SUPPORT_EMAIL}"
+      Branding__CompanyLegalName: "${BRANDING_COMPANY_LEGAL_NAME:-OppSignal, Inc.}"
+      Branding__WebBaseUrl: "${BRANDING_WEB_BASE_URL}"
+      Cors__Origins__0: "${BRANDING_WEB_BASE_URL}"
+      Seed__Demo: "${SEED_DEMO:-false}"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    depends_on:
+      - api
+    env_file: [.env]
+    environment:
+      DOTNET_ENVIRONMENT: "Production"
+      ConnectionStrings__Postgres: "${CONNECTIONSTRINGS_POSTGRES}"
+      Ingest__Source: "${INGEST_SOURCE:-Sam}"
+      Ingest__IntervalMinutes: "${INGEST_INTERVAL_MINUTES:-180}"
+      Ingest__WindowDays: "${INGEST_WINDOW_DAYS:-3}"
+      Sam__ApiKey: "${SAM_API_KEY}"
+      Sam__BaseUrl: "${SAM_BASE_URL:-https://api.sam.gov}"
+      Email__Provider: "${EMAIL_PROVIDER:-Postmark}"
+      Email__FromEmail: "${EMAIL_FROM_EMAIL}"
+      Email__FromName: "${EMAIL_FROM_NAME:-OppSignal}"
+      Email__Postmark__ServerToken: "${POSTMARK_SERVER_TOKEN}"
+      Email__Postmark__MessageStream: "${POSTMARK_MESSAGE_STREAM:-outbound}"
+      Digest__SendHourLocal: "${DIGEST_SEND_HOUR_LOCAL:-7}"
+      Branding__ProductName: "${BRANDING_PRODUCT_NAME:-OppSignal}"
+      Branding__SupportEmail: "${BRANDING_SUPPORT_EMAIL}"
+      Branding__WebBaseUrl: "${BRANDING_WEB_BASE_URL}"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    depends_on:
+      - api
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS}"
+      API_UPSTREAM: "api:8080"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+  # ── Optional: run Postgres in-cluster instead of RDS. Uncomment and point
+  #    CONNECTIONSTRINGS_POSTGRES at Host=postgres.
+  # postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: oppsignal
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: oppsignal
+  #   volumes: [pgdata:/var/lib/postgresql/data]
+  #   restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
+  # pgdata:

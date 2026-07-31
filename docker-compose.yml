@@ -1,0 +1,88 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# OppSignal — local / demo stack (FIXTURE mode, zero credentials).
+#
+#   docker compose up --build
+#
+# Then open http://localhost:8088 and sign in with the seeded demo account:
+#   demo@oppsignal.dev  /  DemoPassword123!       (Pro plan, 3 profiles, matches)
+#   admin@oppsignal.dev /  AdminPassword123!      (admin metrics page)
+#
+# Digest / verification emails are written to the `maildrop` volume (Dev email
+# sender) — inspect them with:  docker compose exec api ls /app/maildrop
+# ─────────────────────────────────────────────────────────────────────────────
+name: oppsignal
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oppsignal
+      POSTGRES_PASSWORD: oppsignal
+      POSTGRES_DB: oppsignal
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oppsignal -d oppsignal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=oppsignal;Username=oppsignal;Password=oppsignal"
+      ASPNETCORE_ENVIRONMENT: "Production"
+      Ingest__Source: "Fixture"
+      Email__Provider: "Dev"
+      Email__DevDropPath: "/app/maildrop"
+      Branding__WebBaseUrl: "http://localhost:8088"
+      Jwt__SigningKey: "local-demo-signing-key-change-me-at-least-32-bytes!"
+      # Fixture mode auto-seeds the demo; set Seed__Demo=false to disable.
+    volumes:
+      - maildrop:/app/maildrop
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=oppsignal;Username=oppsignal;Password=oppsignal"
+      DOTNET_ENVIRONMENT: "Production"
+      Ingest__Source: "Fixture"
+      Ingest__IntervalMinutes: "180"
+      Email__Provider: "Dev"
+      Email__DevDropPath: "/app/maildrop"
+      Branding__WebBaseUrl: "http://localhost:8088"
+      Digest__SendHourLocal: "7"
+    volumes:
+      - maildrop:/app/maildrop
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    depends_on:
+      - api
+    environment:
+      SITE_ADDRESS: ":80"
+      API_UPSTREAM: "api:8080"
+    ports:
+      - "8088:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  maildrop:

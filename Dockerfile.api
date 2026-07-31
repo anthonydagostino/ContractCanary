@@ -1,0 +1,23 @@
+# ---- OppSignal API image ----
+# Build context: repository root.
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Restore first (better layer caching) then copy the rest.
+COPY backend/OppSignal.sln backend/Directory.Build.props ./backend/
+COPY backend/src/ ./backend/src/
+RUN dotnet restore backend/src/OppSignal.Api/OppSignal.Api.csproj
+
+# PreserveCompilationContext (set in the csproj) keeps the ref assemblies RazorLight
+# needs for runtime email-template compilation.
+RUN dotnet publish backend/src/OppSignal.Api/OppSignal.Api.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+ENV ASPNETCORE_URLS=http://+:8080 \
+    DOTNET_RUNNING_IN_CONTAINER=true
+EXPOSE 8080
+COPY --from=build /app ./
+# Directory the Dev email sender writes to (mounted as a volume in compose).
+RUN mkdir -p /app/maildrop
+ENTRYPOINT ["dotnet", "OppSignal.Api.dll"]

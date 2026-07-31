@@ -1,0 +1,36 @@
+# OppSignal reverse proxy + SPA host.
+#
+# SITE_ADDRESS selects the listener:
+#   • local/dev  -> ":80"                    (plain HTTP, no certs)
+#   • production -> "app.yourdomain.com"     (Caddy auto-provisions Let's Encrypt TLS)
+#
+# The API service must be reachable at http://api:8080 on the compose network.
+
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	# API → the ASP.NET Core service (same-origin, so the SPA has no CORS to deal with).
+	@api path /api/*
+	handle @api {
+		reverse_proxy {$API_UPSTREAM:api:8080}
+	}
+
+	# Health passthrough (handy for load balancers hitting the edge).
+	handle /health* {
+		reverse_proxy {$API_UPSTREAM:api:8080}
+	}
+
+	# Everything else → the static SPA with history-API fallback.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		# Reasonable baseline security headers; tune per your needs.
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

@@ -1,0 +1,17 @@
+# ---- OppSignal Worker image (ingest + daily digest via Quartz) ----
+# Build context: repository root.
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY backend/OppSignal.sln backend/Directory.Build.props ./backend/
+COPY backend/src/ ./backend/src/
+RUN dotnet restore backend/src/OppSignal.Worker/OppSignal.Worker.csproj
+
+RUN dotnet publish backend/src/OppSignal.Worker/OppSignal.Worker.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+COPY --from=build /app ./
+RUN mkdir -p /app/maildrop
+ENTRYPOINT ["dotnet", "OppSignal.Worker.dll"]

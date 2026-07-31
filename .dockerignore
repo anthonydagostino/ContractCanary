@@ -1,0 +1,26 @@
+# Build outputs
+**/bin
+**/obj
+**/dist
+**/node_modules
+frontend/coverage
+backend/**/TestResults
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+**/maildrop
+**/appsettings.Development.json
+
+# VCS / editor
+.git
+.gitignore
+.vs
+.vscode
+.idea
+**/*.user
+
+# Docs & misc not needed in images
+*.md
+!README.md
