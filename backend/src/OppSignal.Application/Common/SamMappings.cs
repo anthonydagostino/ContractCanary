@@ -152,6 +152,15 @@ public static class SamMappings
     public static string SetAsideDescription(SetAsideCode c) =>
         SetAsideInfo.TryGetValue(c, out var i) ? i.Description : c.ToString();
 
+    /// <summary>Notice types exposed in the profile UI (spec: solicitation, presolicitation, sources sought, combined synopsis).</summary>
+    public static IEnumerable<NoticeType> ProfileSelectableNoticeTypes => new[]
+    {
+        NoticeType.Solicitation,
+        NoticeType.Presolicitation,
+        NoticeType.SourcesSought,
+        NoticeType.CombinedSynopsis,
+    };
+
     /// <summary>Set-asides exposed in the profile UI (spec: small business, 8(a), SDVOSB, WOSB, HUBZone, etc.).</summary>
     public static IEnumerable<SetAsideCode> ProfileSelectableSetAsides => new[]
     {

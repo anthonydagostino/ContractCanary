@@ -1,0 +1,17 @@
+namespace OppSignal.Application.Auth;
+
+public interface IAuthService
+{
+    Task RegisterAsync(RegisterRequest request, CancellationToken ct = default);
+    Task<AuthTokens> LoginAsync(LoginRequest request, CancellationToken ct = default);
+    Task<AuthTokens> RefreshAsync(string refreshToken, CancellationToken ct = default);
+    Task LogoutAsync(string refreshToken, CancellationToken ct = default);
+
+    Task ConfirmEmailAsync(ConfirmEmailRequest request, CancellationToken ct = default);
+    Task ResendVerificationAsync(string email, CancellationToken ct = default);
+    Task ForgotPasswordAsync(string email, CancellationToken ct = default);
+    Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default);
+
+    Task<MeDto> GetMeAsync(Guid userId, CancellationToken ct = default);
+    Task UpdateAccountAsync(Guid userId, UpdateAccountRequest request, CancellationToken ct = default);
+}

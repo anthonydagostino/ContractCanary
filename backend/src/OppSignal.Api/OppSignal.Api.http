@@ -1,6 +1,0 @@
-@OppSignal.Api_HostAddress = http://localhost:5291
-
-GET {{OppSignal.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
