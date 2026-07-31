@@ -93,7 +93,10 @@ public sealed class StripeBillingService : IBillingService
         Event stripeEvent;
         try
         {
-            stripeEvent = EventUtility.ConstructEvent(payload, signatureHeader, _options.WebhookSecret);
+            // throwOnApiVersionMismatch: false — a Stripe account may be pinned to a
+            // different API version than this SDK; that must not break webhooks.
+            stripeEvent = EventUtility.ConstructEvent(
+                payload, signatureHeader, _options.WebhookSecret, throwOnApiVersionMismatch: false);
         }
         catch (StripeException ex)
         {

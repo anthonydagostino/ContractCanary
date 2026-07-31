@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OppSignal.Api.Infrastructure;
 using OppSignal.Api.Validation;
@@ -44,26 +45,29 @@ try
     services.AddSwaggerGen();
 
     // ---- Auth (JWT bearer) ----
-    var jwt = config.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+    // Bind the validation parameters lazily from the SAME IOptions<JwtOptions> the
+    // token issuer uses, so the signing and validation keys can never diverge.
     services.AddAuthentication(o =>
     {
         o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(o =>
-    {
-        o.TokenValidationParameters = new TokenValidationParameters
+    }).AddJwtBearer();
+    services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+        .Configure<IOptions<JwtOptions>>((bearer, jwtOptions) =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwt.Issuer,
-            ValidAudience = jwt.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
-            ClockSkew = TimeSpan.FromSeconds(30),
-        };
-    });
+            var jwt = jwtOptions.Value;
+            bearer.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwt.Issuer,
+                ValidAudience = jwt.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
+                ClockSkew = TimeSpan.FromSeconds(30),
+            };
+        });
     services.AddAuthorization();
 
     // ---- CORS (SPA served separately in dev; same-origin behind Caddy in prod) ----
@@ -75,6 +79,7 @@ try
         .AllowAnyMethod()));
 
     // ---- Rate limiting on auth endpoints ----
+    var authPermitLimit = config.GetValue<int?>("RateLimit:AuthPermitLimit") ?? 10;
     services.AddRateLimiter(o =>
     {
         o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -83,7 +88,7 @@ try
                 partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 factory: _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 10,
+                    PermitLimit = authPermitLimit,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));
@@ -113,7 +118,7 @@ try
     }
 
     app.UseCors("spa");
-    app.UseRateLimiter();
+    if (!app.Environment.IsEnvironment("Testing")) app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
 
