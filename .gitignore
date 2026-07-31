@@ -1,0 +1,49 @@
+# ---- .NET ----
+bin/
+obj/
+*.user
+*.suo
+.vs/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.nupkg
+project.lock.json
+TestResults/
+coverage/
+*.trx
+*.coverage
+
+# ---- Node / Frontend ----
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+frontend/coverage/
+frontend/.eslintcache
+
+# ---- Env / Secrets ----
+.env
+.env.*
+!.env.example
+*.env
+secrets.json
+
+# ---- Emails written by the Dev email sender ----
+maildrop/
+
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# ---- Docker ----
+*.pid
+
+# ---- Logs ----
+logs/
+*.log
