@@ -209,10 +209,17 @@ A notice matches a profile iff **all** of the following hold (an unset/empty
 filter is treated as "no constraint" and passes):
 
 ```
-(profile.Naics is empty  OR  notice.NaicsCode ∈ profile.Naics
-        OR  profile.Psc is empty ? false : notice.PscCode ∈ profile.Psc)   ← NAICS OR PSC
-AND (profile.Keywords is empty     OR  any keyword ⊂ (title + description), case-insensitive)
-AND (profile.AgencyPaths is empty  OR  notice.AgencyPath starts-with any selected path)
+codeClause =
+    neither NAICS nor PSC filter set   -> true            (no code constraint)
+    both set                           -> naicsHit OR pscHit
+    only NAICS set                     -> naicsHit
+    only PSC set                       -> pscHit
+  where naicsHit = notice.NaicsCode ∈ profile.Naics
+        pscHit   = notice.PscCode   ∈ profile.Psc
+
+matches = codeClause
+AND (profile.Keywords is empty     OR  any keyword ⊂ (title + " " + description), case-insensitive)
+AND (profile.AgencyPaths is empty  OR  a selected path is a prefix of, or a "."-segment of, notice.AgencyPath)
 AND (profile.SetAsides is empty    OR  notice.SetAside ∈ profile.SetAsides)
 AND (profile.States is empty       OR  notice.PopState ∈ profile.States)
 AND (profile.NoticeTypes is empty  OR  notice.Type ∈ profile.NoticeTypes)
