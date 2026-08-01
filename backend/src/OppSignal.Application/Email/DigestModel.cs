@@ -11,6 +11,12 @@ public sealed class DigestModel
     public List<DigestGroup> Groups { get; set; } = new();
     public int TotalCount => Groups.Sum(g => g.Items.Count);
 
+    /// <summary>Changes to opportunities the user is tracking (deadline moved / cancelled).</summary>
+    public List<DigestAlert> Alerts { get; set; } = new();
+    public int AlertCount => Alerts.Count;
+    public bool HasMatches => TotalCount > 0;
+    public bool HasAlerts => Alerts.Count > 0;
+
     // Branding (from BrandingOptions)
     public string ProductName { get; set; } = "OppSignal";
     public string Tagline { get; set; } = "";
@@ -38,5 +44,16 @@ public sealed class DigestItem
     public string? SetAside { get; set; }
     public string? PlaceOfPerformance { get; set; }
     public string SamLink { get; set; } = "";
+    public string DetailLink { get; set; } = "";
+}
+
+/// <summary>A change-alert line in the digest (deadline moved / opportunity cancelled).</summary>
+public sealed class DigestAlert
+{
+    public string NoticeId { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string TypeLabel { get; set; } = "";
+    public string Message { get; set; } = "";
+    public bool IsCancelled { get; set; }
     public string DetailLink { get; set; } = "";
 }

@@ -71,15 +71,19 @@ public sealed class NotificationService : INotificationService
 
     public async Task<bool> SendDigestAsync(DigestModel model, CancellationToken ct = default)
     {
-        if (model.TotalCount == 0) return false; // never send an empty digest
+        if (model.TotalCount == 0 && model.AlertCount == 0) return false; // never send an empty digest
 
         ApplyBranding(model);
         var html = await _renderer.RenderAsync("Digest", model);
         var text = BuildDigestText(model);
 
-        var subject = model.TotalCount == 1
-            ? $"1 new contract opportunity — {model.DateLabel}"
-            : $"{model.TotalCount} new contract opportunities — {model.DateLabel}";
+        var subject = model.HasMatches
+            ? (model.TotalCount == 1
+                ? $"1 new contract opportunity — {model.DateLabel}"
+                : $"{model.TotalCount} new contract opportunities — {model.DateLabel}")
+            : (model.AlertCount == 1
+                ? $"An opportunity you're tracking changed — {model.DateLabel}"
+                : $"{model.AlertCount} opportunities you're tracking changed — {model.DateLabel}");
 
         await SendAndLogAsync(new EmailMessage
         {
@@ -157,11 +161,25 @@ public sealed class NotificationService : INotificationService
 
     private static string BuildDigestText(DigestModel model)
     {
+        var headline = model.HasMatches
+            ? $"{model.TotalCount} new opportunit{(model.TotalCount == 1 ? "y" : "ies")}"
+            : $"{model.AlertCount} update{(model.AlertCount == 1 ? "" : "s")} on opportunities you're tracking";
         var lines = new List<string>
         {
-            $"{model.ProductName} — {model.TotalCount} new opportunit{(model.TotalCount == 1 ? "y" : "ies")} ({model.DateLabel})",
+            $"{model.ProductName} — {headline} ({model.DateLabel})",
             "",
         };
+        if (model.HasAlerts)
+        {
+            lines.Add($"== Changes to opportunities you're tracking ({model.AlertCount}) ==");
+            foreach (var alert in model.Alerts)
+            {
+                lines.Add($"- [{alert.TypeLabel}] {alert.Message}");
+                lines.Add($"  {alert.Title}");
+                lines.Add($"  Details: {alert.DetailLink}");
+                lines.Add("");
+            }
+        }
         foreach (var group in model.Groups)
         {
             lines.Add($"== {group.ProfileName} ({group.Items.Count}) ==");

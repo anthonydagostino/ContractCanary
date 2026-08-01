@@ -27,6 +27,7 @@ public interface IDigestService
 public sealed class DigestService : IDigestService
 {
     private const int MaxItemsPerProfile = 20;
+    private const int MaxAlerts = 20;
     private readonly AppDbContext _db;
     private readonly INotificationService _notifications;
     private readonly IEntitlementService _entitlements;
@@ -52,9 +53,14 @@ public sealed class DigestService : IDigestService
 
     public async Task<int> SendDueDigestsAsync(int sendHourLocal, CancellationToken ct = default)
     {
-        var userIds = await _db.NoticeMatches
+        // A user is due if they have un-notified matches OR un-notified change-alerts.
+        var matchUserIds = await _db.NoticeMatches
             .Where(m => m.NotifiedAt == null)
             .Select(m => m.UserId).Distinct().ToListAsync(ct);
+        var alertUserIds = await _db.NoticeAlerts
+            .Where(a => a.NotifiedAt == null)
+            .Select(a => a.UserId).Distinct().ToListAsync(ct);
+        var userIds = matchUserIds.Union(alertUserIds).Distinct().ToList();
 
         var sent = 0;
         foreach (var userId in userIds)
@@ -87,7 +93,13 @@ public sealed class DigestService : IDigestService
             .OrderByDescending(x => x.n.PostedDate)
             .ToListAsync(ct);
 
-        if (rows.Count == 0) return false;
+        var alertRows = await _db.NoticeAlerts
+            .Where(a => a.UserId == userId && a.NotifiedAt == null)
+            .Join(_db.Notices, a => a.NoticeId, n => n.NoticeId, (a, n) => new { a, n.Title })
+            .OrderByDescending(x => x.a.CreatedAt)
+            .ToListAsync(ct);
+
+        if (rows.Count == 0 && alertRows.Count == 0) return false;
 
         var localNow = ToLocal(_clock.UtcNow, user.TimeZoneId);
         var model = new DigestModel
@@ -99,6 +111,9 @@ public sealed class DigestService : IDigestService
             WebBaseUrl = _branding.WebBaseUrl,
         };
 
+        foreach (var x in alertRows.Take(MaxAlerts))
+            model.Alerts.Add(ToAlert(x.a, x.Title, _branding.WebBaseUrl));
+
         foreach (var g in rows.GroupBy(x => new { x.p.Id, x.p.Name }).OrderBy(g => g.Key.Name))
         {
             var group = new DigestGroup { ProfileId = g.Key.Id, ProfileName = g.Key.Name };
@@ -109,19 +124,31 @@ public sealed class DigestService : IDigestService
 
         var sentOk = await _notifications.SendDigestAsync(model, ct);
 
-        // Mark ALL of the user's currently un-notified matches as notified so a
-        // match is never emailed twice (backlog beyond the per-profile cap is
+        // Mark ALL of the user's currently un-notified matches AND change-alerts as
+        // notified so nothing is emailed twice (backlog beyond the caps stays
         // browsable in-app).
         if (sentOk)
         {
             var now = _clock.UtcNow;
-            var toStamp = await _db.NoticeMatches.Where(m => m.UserId == userId && m.NotifiedAt == null).ToListAsync(ct);
-            foreach (var m in toStamp) m.NotifiedAt = now;
+            var matchesToStamp = await _db.NoticeMatches.Where(m => m.UserId == userId && m.NotifiedAt == null).ToListAsync(ct);
+            foreach (var m in matchesToStamp) m.NotifiedAt = now;
+            var alertsToStamp = await _db.NoticeAlerts.Where(a => a.UserId == userId && a.NotifiedAt == null).ToListAsync(ct);
+            foreach (var a in alertsToStamp) a.NotifiedAt = now;
             await _db.SaveChangesAsync(ct);
         }
 
         return sentOk;
     }
+
+    private static DigestAlert ToAlert(NoticeAlert a, string title, string webBaseUrl) => new()
+    {
+        NoticeId = a.NoticeId,
+        Title = title,
+        TypeLabel = a.Type == Domain.Enums.AlertType.Cancelled ? "Cancelled" : "Deadline changed",
+        Message = a.Message,
+        IsCancelled = a.Type == Domain.Enums.AlertType.Cancelled,
+        DetailLink = $"{webBaseUrl.TrimEnd('/')}/app/opportunities/{a.NoticeId}",
+    };
 
     private static DigestItem ToItem(Notice n, string tz, string webBaseUrl)
     {

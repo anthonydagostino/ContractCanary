@@ -77,4 +77,60 @@ public class DigestServiceTests : ApiTestBase
             (await digest.SendUserDigestAsync(userId)).Should().BeFalse();
         }
     }
+
+    [Fact]
+    public async Task Digest_sends_on_change_alert_alone_and_stamps_it_notified()
+    {
+        var (_, _, userId) = await RegisterAndLoginAsync($"digestalert_{Guid.NewGuid():N}@test.dev");
+
+        // Seed a notice + an un-notified change-alert for this user (NO new matches).
+        var noticeId = $"ALR-{Guid.NewGuid():N}"[..16];
+        Guid alertId;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Notices.Add(new Notice
+            {
+                NoticeId = noticeId,
+                Title = "Base Facilities Maintenance",
+                Type = NoticeType.Solicitation,
+                PostedDate = DateTime.UtcNow.Date,
+                FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
+            });
+            var alert = new NoticeAlert
+            {
+                UserId = userId,
+                NoticeId = noticeId,
+                Type = AlertType.DeadlineChanged,
+                Message = "Response deadline moved from Jul 1 to Jul 15, 2026.",
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.NoticeAlerts.Add(alert);
+            await db.SaveChangesAsync();
+            alertId = alert.Id;
+        }
+
+        // Sends even with zero new matches, because there's an un-notified change-alert.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var digest = scope.ServiceProvider.GetRequiredService<IDigestService>();
+            (await digest.SendUserDigestAsync(userId)).Should().BeTrue();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.NoticeAlerts.Where(a => a.Id == alertId).Select(a => a.NotifiedAt).FirstAsync())
+                .Should().NotBeNull("the alert was included in the digest");
+            (await db.EmailLogs.CountAsync(e => e.UserId == userId && e.Kind == EmailKind.Digest && e.Success))
+                .Should().Be(1);
+        }
+
+        // Second send: nothing un-notified left → no email.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var digest = scope.ServiceProvider.GetRequiredService<IDigestService>();
+            (await digest.SendUserDigestAsync(userId)).Should().BeFalse();
+        }
+    }
 }

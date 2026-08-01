@@ -47,18 +47,26 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | "Your signal" dashboard stats | ✅ Built & on | — |
 | Pipeline tracking on saved opportunities | ✅ Built & on | — |
 | First-run onboarding nudge (create your first alert) | ✅ Built & on | — |
-| Amendment & deadline-change alerts | ✅ Built & on | — |
+| Amendment & deadline-change alerts (in-app + in the digest) | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
 | Your own admin account + disable demo logins | ⏳ Your task | See Part: Go-live cleanup |
 | Legal review of ToS/Privacy | ⏳ Your task | 30-min lawyer/paralegal pass |
 
-**Planned next (engineering, no action needed from you):** surface change-alerts in
-the daily digest email too (the in-app feed is live now); this rides on top of the
-Postmark setup you're doing.
+**Planned next (engineering, no action needed from you):** a weekly "what you're
+missing" summary for users who haven't logged in, to pull people back in — and
+per-user in-app notification preferences once there's more to tune.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- Change-alerts in the daily digest: the deadline-moved / cancelled alerts that
+  already show in-app now also ride along in the daily digest email, in their own
+  "Changes to opportunities you're tracking" section at the top (they're the most
+  time-sensitive thing in the email). If a user has *only* a change that day and no
+  new matches, they still get an email about it — so a moved deadline never slips by
+  just because nothing new was posted. Each alert is emailed once, then marked sent.
+  (Goes live automatically once your Postmark token is set; the in-app feed is
+  already live regardless.)
 - Amendment & deadline-change alerts: when an opportunity you've matched or saved
   is updated on SAM.gov — its response deadline moves, or it's cancelled/archived —
   you get an in-app alert (with an unread badge on the "Alerts" nav). The importer
