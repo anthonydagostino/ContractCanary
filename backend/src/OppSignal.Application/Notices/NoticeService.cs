@@ -12,6 +12,7 @@ public interface INoticeService
     Task<PagedResult<NoticeListItemDto>> SearchAsync(Guid userId, NoticeQuery query, CancellationToken ct = default);
     Task<NoticeDetailDto> GetDetailAsync(Guid userId, string noticeId, CancellationToken ct = default);
     Task<string> ExportCsvAsync(Guid userId, NoticeQuery query, CancellationToken ct = default);
+    Task<UserStatsDto> GetStatsAsync(Guid userId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -23,8 +24,13 @@ public sealed class NoticeService : INoticeService
     private const int MaxPageSize = 100;
     private const int CsvRowCap = 10_000;
     private readonly IAppDbContext _db;
+    private readonly IClock _clock;
 
-    public NoticeService(IAppDbContext db) => _db = db;
+    public NoticeService(IAppDbContext db, IClock clock)
+    {
+        _db = db;
+        _clock = clock;
+    }
 
     public async Task<PagedResult<NoticeListItemDto>> SearchAsync(Guid userId, NoticeQuery q, CancellationToken ct = default)
     {
@@ -110,6 +116,31 @@ public sealed class NoticeService : INoticeService
               .Append(Csv(n.UiLink)).Append('\n');
         }
         return sb.ToString();
+    }
+
+    public async Task<UserStatsDto> GetStatsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var now = _clock.UtcNow;
+        var weekAgo = now.AddDays(-7);
+        var soon = now.AddDays(7);
+
+        var matchedIds = _db.NoticeMatches.AsNoTracking()
+            .Where(m => m.UserId == userId)
+            .Select(m => m.NoticeId)
+            .Distinct();
+
+        var matchedActive = _db.Notices.AsNoTracking()
+            .Where(n => n.IsActive && matchedIds.Contains(n.NoticeId));
+
+        return new UserStatsDto
+        {
+            MatchedActive = await matchedActive.CountAsync(ct),
+            NewMatchesThisWeek = await matchedActive.CountAsync(n => n.PostedDate >= weekAgo, ct),
+            ClosingSoon = await matchedActive.CountAsync(
+                n => n.ResponseDeadline != null && n.ResponseDeadline >= now && n.ResponseDeadline <= soon, ct),
+            Saved = await _db.SavedNotices.AsNoTracking().CountAsync(s => s.UserId == userId, ct),
+            TotalActive = await _db.Notices.AsNoTracking().CountAsync(n => n.IsActive, ct),
+        };
     }
 
     // ---- query building -----------------------------------------------------

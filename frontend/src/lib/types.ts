@@ -121,6 +121,14 @@ export interface PagedResult<T> {
   totalPages: number
 }
 
+export interface UserStats {
+  newMatchesThisWeek: number
+  closingSoon: number
+  saved: number
+  matchedActive: number
+  totalActive: number
+}
+
 export interface NaicsDto { code: string; title: string; level: number }
 export interface PscDto { code: string; title: string; category: string; isService: boolean }
 export interface AgencyDto { code: string; name: string; tier: number; parentCode?: string }

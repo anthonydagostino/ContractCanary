@@ -3,7 +3,7 @@ import { api } from '../lib/api'
 import { noticeQueryString } from '../lib/noticeParams'
 import type {
   AdminMetrics, AgencyDto, MatchProfile, Me, Meta, NaicsDto, NoticeDetail, NoticeListItem,
-  NoticeQueryParams, NoticeTypeDto, PagedResult, ProfileInput, PscDto, SetAsideDto,
+  NoticeQueryParams, NoticeTypeDto, PagedResult, ProfileInput, PscDto, SetAsideDto, UserStats,
 } from '../lib/types'
 
 export const queryClient = new QueryClient({
@@ -47,6 +47,9 @@ export function useDeleteProfile() {
 }
 
 // ---- Notices ----
+export const useUserStats = () =>
+  useQuery({ queryKey: ['user-stats'], queryFn: async () => (await api.get<UserStats>('/notices/stats')).data })
+
 export const useNotices = (q: NoticeQueryParams) =>
   useQuery({
     queryKey: ['notices', q],
@@ -70,6 +73,8 @@ export function useToggleSaved() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notices'] })
       qc.invalidateQueries({ queryKey: ['notice'] })
+      qc.invalidateQueries({ queryKey: ['user-stats'] })
+      qc.invalidateQueries({ queryKey: ['saved-pipeline'] })
     },
   })
 }

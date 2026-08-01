@@ -44,7 +44,7 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | Real SAM.gov data | ✅ Built & on | Already on (`INGEST_SOURCE=Sam`) |
 | Branded marketing site + FAQ + comparison + SEO | ✅ Built & on | — |
 | AI opportunity summaries | ✅ Built · dormant | `AI_ENABLED=true` + `ANTHROPIC_API_KEY` (see Part: AI Summaries) |
-| "Your signal" dashboard stats | 🔨 In progress | — |
+| "Your signal" dashboard stats | ✅ Built & on | — |
 | Pipeline tracking on saved opportunities | 🔨 In progress | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |

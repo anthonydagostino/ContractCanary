@@ -28,6 +28,10 @@ public sealed class NoticesController : ControllerBase
     public async Task<ActionResult<PagedResult<NoticeListItemDto>>> Search([FromQuery] NoticeQuery query, CancellationToken ct)
         => Ok(await _notices.SearchAsync(User.GetUserId(), query, ct));
 
+    [HttpGet("stats")]
+    public async Task<ActionResult<UserStatsDto>> Stats(CancellationToken ct)
+        => Ok(await _notices.GetStatsAsync(User.GetUserId(), ct));
+
     [HttpGet("{noticeId}")]
     public async Task<ActionResult<NoticeDetailDto>> Detail(string noticeId, CancellationToken ct)
         => Ok(await _notices.GetDetailAsync(User.GetUserId(), noticeId, ct));

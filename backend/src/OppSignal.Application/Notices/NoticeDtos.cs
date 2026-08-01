@@ -89,3 +89,13 @@ public sealed class NoticeDetailDto : NoticeListItemDto
 }
 
 public sealed record MatchedProfileDto(Guid ProfileId, string ProfileName, string? MatchReason);
+
+/// <summary>At-a-glance "your signal" numbers for the dashboard header.</summary>
+public sealed class UserStatsDto
+{
+    public int NewMatchesThisWeek { get; set; }
+    public int ClosingSoon { get; set; }
+    public int Saved { get; set; }
+    public int MatchedActive { get; set; }
+    public int TotalActive { get; set; }
+}

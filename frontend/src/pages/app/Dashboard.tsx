@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '../../components/PageHeader'
 import { NoticeTable } from '../../components/NoticeTable'
 import { EmptyState, Pagination, PageLoader, Badge } from '../../components/ui'
-import { noticesCsvUrl, useNotices, useNoticeTypes, useProfiles } from '../../hooks/queries'
+import { noticesCsvUrl, useNotices, useNoticeTypes, useProfiles, useUserStats } from '../../hooks/queries'
 import { getAccessToken } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import type { NoticeQueryParams, NoticeType } from '../../lib/types'
@@ -11,6 +12,7 @@ export function Dashboard() {
   const { me } = useAuth()
   const { data: profiles } = useProfiles()
   const { data: noticeTypes } = useNoticeTypes()
+  const { data: stats } = useUserStats()
 
   const [searchInput, setSearchInput] = useState('')
   const [q, setQ] = useState<NoticeQueryParams>({ page: 1, pageSize: 25, sort: 'posted', direction: 'desc', matchedOnly: false })
@@ -51,6 +53,30 @@ export function Dashboard() {
           <span className="text-xs text-slate-400">CSV export is a Pro feature</span>
         )}
       />
+
+      {/* Your signal */}
+      {stats && (
+        <div className="mb-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              value={stats.newMatchesThisWeek} label="New matches this week" tone="canary"
+              onClick={() => patch({ matchedOnly: true, profileId: undefined, sort: 'posted', direction: 'desc' })}
+            />
+            <StatCard
+              value={stats.closingSoon} label="Closing within 7 days" tone="amber"
+              onClick={() => patch({ matchedOnly: true, profileId: undefined, sort: 'deadline', direction: 'asc' })}
+            />
+            <StatCard
+              value={stats.matchedActive} label="Matched & open" tone="ink"
+              onClick={() => patch({ matchedOnly: true, profileId: undefined })}
+            />
+            <StatCard value={stats.saved} label="Saved" tone="slate" to="/app/saved" />
+          </div>
+          <p className="mt-2 text-xs text-slate-400">
+            Watching {stats.totalActive.toLocaleString()} open federal opportunities for you.
+          </p>
+        </div>
+      )}
 
       {/* Filter bar */}
       <div className="card mb-4 p-4">
@@ -125,4 +151,22 @@ export function Dashboard() {
       )}
     </div>
   )
+}
+
+function StatCard({ value, label, tone, onClick, to }: {
+  value: number
+  label: string
+  tone: 'canary' | 'amber' | 'ink' | 'slate'
+  onClick?: () => void
+  to?: string
+}) {
+  const toneCls = { canary: 'text-canary-700', amber: 'text-amber-600', ink: 'text-ink-900', slate: 'text-slate-700' }[tone]
+  const cls = 'card block w-full p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lift'
+  const inner = (
+    <>
+      <span className={`block text-3xl font-bold tabular-nums ${toneCls}`}>{value.toLocaleString()}</span>
+      <span className="mt-0.5 block text-xs font-medium text-slate-500">{label}</span>
+    </>
+  )
+  return to ? <Link to={to} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>
 }
