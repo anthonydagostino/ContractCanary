@@ -42,7 +42,7 @@ public static class NoticeNormalizer
             PostedDate = DateTime.SpecifyKind(postedDate, DateTimeKind.Utc),
             ResponseDeadline = ParseDateTimeUtc(dto.ResponseDeadLine),
             ArchiveDate = ParseDate(dto.ArchiveDate) is { } ad ? DateTime.SpecifyKind(ad, DateTimeKind.Utc) : null,
-            PopState = Trim(pop?.State?.Code)?.ToUpperInvariant(),
+            PopState = StateCode(pop?.State?.Code),
             PopCity = Trim(pop?.City?.Name),
             PopZip = Trim(pop?.Zip),
             PopCountry = Trim(pop?.Country?.Code),
@@ -72,6 +72,17 @@ public static class NoticeNormalizer
     }
 
     private static string? Trim(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    // Place-of-performance state: usually a 2-letter US code, but SAM data can carry
+    // longer international province codes or malformed values. Store what's there,
+    // upper-cased and capped to the column width, so one bad record can't fail the batch.
+    private const int PopStateMaxLength = 16;
+    private static string? StateCode(string? s)
+    {
+        var t = Trim(s)?.ToUpperInvariant();
+        if (t is null) return null;
+        return t.Length <= PopStateMaxLength ? t : t[..PopStateMaxLength];
+    }
 
     private static DateTime? ParseDate(string? s)
     {

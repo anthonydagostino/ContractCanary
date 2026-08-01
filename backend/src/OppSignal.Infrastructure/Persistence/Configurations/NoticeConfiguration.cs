@@ -19,7 +19,10 @@ public class NoticeConfiguration : IEntityTypeConfiguration<Notice>
         b.Property(x => x.OfficeName).HasMaxLength(512);
         b.Property(x => x.NaicsCode).HasMaxLength(12);
         b.Property(x => x.PscCode).HasMaxLength(12);
-        b.Property(x => x.PopState).HasMaxLength(2);
+        // Usually a 2-letter US state code, but real SAM data carries longer values
+        // (international provinces, or malformed records with a full name in the code
+        // field). Kept generous so a single messy record can't abort the ingest batch.
+        b.Property(x => x.PopState).HasMaxLength(16);
         b.Property(x => x.PopCountry).HasMaxLength(8);
         b.Property(x => x.RawJson).HasColumnType("jsonb");
 

@@ -65,6 +65,28 @@ public class NoticeNormalizerTests
     }
 
     [Theory]
+    [InlineData("va", "VA")]                                   // normal 2-letter US code, upper-cased
+    [InlineData("nsw", "NSW")]                                 // international province: >2 chars, must not overflow
+    [InlineData("Virginia", "VIRGINIA")]                       // malformed record: full name in the code field
+    [InlineData("THIS-IS-A-VERY-LONG-BOGUS-VALUE", "THIS-IS-A-VERY-L")] // pathological: capped to column width (16)
+    public void PopState_accepts_longer_or_messy_codes_without_overflow(string code, string expected)
+    {
+        // Regression: real SAM data carries place-of-performance state codes longer than
+        // the original varchar(2), which aborted the whole ingest batch. Normalizer now
+        // upper-cases and caps to the (widened) column width instead of failing.
+        var dto = new SamOpportunityDto
+        {
+            NoticeId = "x",
+            PlaceOfPerformance = new SamPlaceOfPerformance { State = new SamCodeName { Code = code } },
+        };
+
+        var n = NoticeNormalizer.ToNotice(dto, Now);
+
+        n.PopState.Should().Be(expected);
+        n.PopState!.Length.Should().BeLessThanOrEqualTo(16);
+    }
+
+    [Theory]
     [InlineData("DEPT OF DEFENSE", "DEPT OF DEFENSE", null, "DEPT OF DEFENSE")]
     [InlineData("A.B.C.D", "A", "B", "D")]
     [InlineData("", null, null, null)]
