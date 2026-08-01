@@ -63,6 +63,7 @@ public sealed class IngestService : IIngestService
         await _db.SaveChangesAsync(ct);
 
         var changed = new Dictionary<string, Notice>();
+        var amendments = new Dictionary<string, IReadOnlyList<DetectedChange>>();
         try
         {
             var pageSize = Math.Clamp(_options.PageSize, 1, 1000);
@@ -78,7 +79,7 @@ public sealed class IngestService : IIngestService
                 if (page.Items.Count == 0) break;
                 run.NoticesSeen += page.Items.Count;
 
-                await UpsertPageAsync(page.Items, now, changed, run, ct);
+                await UpsertPageAsync(page.Items, now, changed, amendments, run, ct);
 
                 offset += pageSize;
                 if (offset >= page.TotalRecords) break;
@@ -88,6 +89,9 @@ public sealed class IngestService : IIngestService
             await _db.SaveChangesAsync(ct);
 
             run.MatchesCreated = await _matching.MatchNoticesAsync(changed.Values.ToList(), ct);
+
+            // Raise change-alerts for users tracking any materially-changed notice.
+            await CreateAmendmentAlertsAsync(amendments, now, ct);
 
             run.Status = IngestStatus.Succeeded;
             run.CompletedAt = _clock.UtcNow;
@@ -111,7 +115,8 @@ public sealed class IngestService : IIngestService
 
     private async Task UpsertPageAsync(
         IReadOnlyList<SamOpportunityDto> items, DateTime now,
-        Dictionary<string, Notice> changed, IngestRun run, CancellationToken ct)
+        Dictionary<string, Notice> changed, Dictionary<string, IReadOnlyList<DetectedChange>> amendments,
+        IngestRun run, CancellationToken ct)
     {
         // Dedup within page and against notices already touched this run.
         var pageIds = items.Select(i => i.NoticeId)
@@ -135,6 +140,10 @@ public sealed class IngestService : IIngestService
             }
             else if (!string.Equals(current.RawJson, candidate.RawJson, StringComparison.Ordinal))
             {
+                // Detect material changes against the PRIOR stored values, before overwriting.
+                var detected = NoticeChangeDetector.Detect(current, candidate);
+                if (detected.Count > 0) amendments[current.NoticeId] = detected;
+
                 CopyMutable(current, candidate);
                 current.LastSeenAt = now;
                 run.NoticesUpdated++;
@@ -144,6 +153,56 @@ public sealed class IngestService : IIngestService
             {
                 current.LastSeenAt = now; // touch only
             }
+        }
+    }
+
+    private async Task CreateAmendmentAlertsAsync(
+        Dictionary<string, IReadOnlyList<DetectedChange>> amendments, DateTime now, CancellationToken ct)
+    {
+        if (amendments.Count == 0) return;
+        var noticeIds = amendments.Keys.ToList();
+
+        // Affected users = everyone tracking the notice: matched to a profile, or saved.
+        var byNotice = new Dictionary<string, HashSet<Guid>>();
+        void Track(string noticeId, Guid userId)
+        {
+            if (!byNotice.TryGetValue(noticeId, out var set)) byNotice[noticeId] = set = new HashSet<Guid>();
+            set.Add(userId);
+        }
+
+        foreach (var mu in await _db.NoticeMatches.AsNoTracking()
+                     .Where(m => noticeIds.Contains(m.NoticeId))
+                     .Select(m => new { m.NoticeId, m.UserId }).Distinct().ToListAsync(ct))
+            Track(mu.NoticeId, mu.UserId);
+
+        foreach (var su in await _db.SavedNotices.AsNoTracking()
+                     .Where(s => noticeIds.Contains(s.NoticeId))
+                     .Select(s => new { s.NoticeId, s.UserId }).Distinct().ToListAsync(ct))
+            Track(su.NoticeId, su.UserId);
+
+        var created = 0;
+        foreach (var (noticeId, changes) in amendments)
+        {
+            if (!byNotice.TryGetValue(noticeId, out var users)) continue;
+            foreach (var userId in users)
+                foreach (var change in changes)
+                {
+                    _db.NoticeAlerts.Add(new NoticeAlert
+                    {
+                        UserId = userId,
+                        NoticeId = noticeId,
+                        Type = change.Type,
+                        Message = change.Message,
+                        CreatedAt = now,
+                    });
+                    created++;
+                }
+        }
+
+        if (created > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            _log.LogInformation("Created {Count} change-alerts across {Notices} amended notices", created, amendments.Count);
         }
     }
 

@@ -47,16 +47,24 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | "Your signal" dashboard stats | ✅ Built & on | — |
 | Pipeline tracking on saved opportunities | ✅ Built & on | — |
 | First-run onboarding nudge (create your first alert) | ✅ Built & on | — |
+| Amendment & deadline-change alerts | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
 | Your own admin account + disable demo logins | ⏳ Your task | See Part: Go-live cleanup |
 | Legal review of ToS/Privacy | ⏳ Your task | 30-min lawyer/paralegal pass |
 
-**Planned next (engineering, no action needed from you):** amendment & deadline-change
-alerts — flag when a matched/saved opportunity is updated or its deadline moves.
+**Planned next (engineering, no action needed from you):** surface change-alerts in
+the daily digest email too (the in-app feed is live now); this rides on top of the
+Postmark setup you're doing.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- Amendment & deadline-change alerts: when an opportunity you've matched or saved
+  is updated on SAM.gov — its response deadline moves, or it's cancelled/archived —
+  you get an in-app alert (with an unread badge on the "Alerts" nav). The importer
+  detects the change and notifies everyone tracking that opportunity. This is the
+  "we've got your back" feature that stops people missing a change on a contract
+  they're actively chasing.
 - First-run onboarding: new users with no alerts see a clear "create your first
   alert" call-to-action on the dashboard, so signups reach value faster.
 - Pipeline tracking: the Saved page is now a pursuit board — every saved

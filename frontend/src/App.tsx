@@ -14,6 +14,7 @@ import { OpportunityDetail } from './pages/app/OpportunityDetail'
 import { Profiles } from './pages/app/Profiles'
 import { ProfileEditor } from './pages/app/ProfileEditor'
 import { Saved } from './pages/app/Saved'
+import { Alerts } from './pages/app/Alerts'
 import { Deadlines } from './pages/app/Deadlines'
 import { Settings } from './pages/app/Settings'
 import { Admin } from './pages/app/Admin'
@@ -40,6 +41,7 @@ export function App() {
         <Route path="profiles/new" element={<ProfileEditor />} />
         <Route path="profiles/:id" element={<ProfileEditor />} />
         <Route path="saved" element={<Saved />} />
+        <Route path="alerts" element={<Alerts />} />
         <Route path="deadlines" element={<Deadlines />} />
         <Route path="settings" element={<Settings />} />
         <Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />

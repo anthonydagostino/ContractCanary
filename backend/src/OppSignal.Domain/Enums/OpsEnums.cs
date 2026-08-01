@@ -23,3 +23,10 @@ public enum EmailKind
     Digest = 2,
     Welcome = 3,
 }
+
+/// <summary>Kind of change-alert raised on an opportunity a user is tracking.</summary>
+public enum AlertType
+{
+    DeadlineChanged = 0,
+    Cancelled = 1,
+}

@@ -129,6 +129,19 @@ export interface UserStats {
   totalActive: number
 }
 
+export type AlertType = 'DeadlineChanged' | 'Cancelled'
+
+export interface Alert {
+  id: string
+  noticeId: string
+  noticeTitle: string
+  type: AlertType
+  typeLabel: string
+  message: string
+  createdAt: string
+  read: boolean
+}
+
 export type PipelineStatus = 'Reviewing' | 'Pursuing' | 'Submitted' | 'Won' | 'Lost' | 'Passed'
 
 export interface SavedNoticeItem {

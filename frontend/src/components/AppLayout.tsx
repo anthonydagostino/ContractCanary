@@ -6,6 +6,7 @@ import { branding } from '../config/branding'
 import { useAuth } from '../lib/auth'
 import { Badge } from './ui'
 import { daysUntil } from '../lib/format'
+import { useUnreadAlertCount } from '../hooks/queries'
 
 const nav = [
   { to: '/app', label: 'Opportunities', end: true, icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -19,6 +20,7 @@ export function AppLayout() {
   const { me, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const { data: unread } = useUnreadAlertCount()
 
   const trialDaysLeft = me?.subscriptionStatus === 'Trialing' ? daysUntil(me.trialEndsAt) : null
 
@@ -63,6 +65,20 @@ export function AppLayout() {
                   {item.label}
                 </NavLink>
               ))}
+              <NavLink
+                to="/app/alerts"
+                onClick={() => setOpen(false)}
+                className={({ isActive }) => clsx(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
+                  isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100',
+                )}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M15 17h5l-1.4-1.4a2 2 0 01-.6-1.4V11a6 6 0 00-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                Alerts
+                {unread && unread.count > 0 && (
+                  <span className="ml-auto rounded-full bg-canary-400 px-1.5 py-0.5 text-xs font-bold text-ink-900">{unread.count}</span>
+                )}
+              </NavLink>
               {me?.isAdmin && (
                 <NavLink to="/app/admin" onClick={() => setOpen(false)} className={({ isActive }) => clsx(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',

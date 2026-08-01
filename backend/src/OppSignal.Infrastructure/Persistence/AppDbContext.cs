@@ -20,6 +20,7 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<Notice> Notices => Set<Notice>();
     public DbSet<NoticeMatch> NoticeMatches => Set<NoticeMatch>();
     public DbSet<SavedNotice> SavedNotices => Set<SavedNotice>();
+    public DbSet<NoticeAlert> NoticeAlerts => Set<NoticeAlert>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<IngestRun> IngestRuns => Set<IngestRun>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();

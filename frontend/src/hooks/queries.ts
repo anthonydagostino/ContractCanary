@@ -2,7 +2,7 @@ import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/re
 import { api } from '../lib/api'
 import { noticeQueryString } from '../lib/noticeParams'
 import type {
-  AdminMetrics, AgencyDto, MatchProfile, Me, Meta, NaicsDto, NoticeDetail, NoticeListItem,
+  AdminMetrics, AgencyDto, Alert, MatchProfile, Me, Meta, NaicsDto, NoticeDetail, NoticeListItem,
   NoticeQueryParams, NoticeTypeDto, PagedResult, PipelineStatus, ProfileInput, PscDto,
   SavedNoticeItem, SetAsideDto, UserStats,
 } from '../lib/types'
@@ -53,6 +53,28 @@ export const useUserStats = () =>
 
 export const useSavedNotices = () =>
   useQuery({ queryKey: ['saved-pipeline'], queryFn: async () => (await api.get<SavedNoticeItem[]>('/notices/saved')).data })
+
+// ---- Change alerts ----
+export const useAlerts = () =>
+  useQuery({ queryKey: ['alerts'], queryFn: async () => (await api.get<Alert[]>('/alerts')).data })
+
+export const useUnreadAlertCount = () =>
+  useQuery({
+    queryKey: ['alerts-unread'],
+    queryFn: async () => (await api.get<{ count: number }>('/alerts/unread-count')).data,
+    refetchInterval: 60_000,
+  })
+
+export function useMarkAlertsRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => api.post('/alerts/read-all'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['alerts'] })
+      qc.invalidateQueries({ queryKey: ['alerts-unread'] })
+    },
+  })
+}
 
 export function useUpdateStatus() {
   const qc = useQueryClient()

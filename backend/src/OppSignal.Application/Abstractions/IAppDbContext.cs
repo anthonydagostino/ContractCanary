@@ -14,6 +14,7 @@ public interface IAppDbContext
     DbSet<Notice> Notices { get; }
     DbSet<NoticeMatch> NoticeMatches { get; }
     DbSet<SavedNotice> SavedNotices { get; }
+    DbSet<NoticeAlert> NoticeAlerts { get; }
     DbSet<Subscription> Subscriptions { get; }
     DbSet<IngestRun> IngestRuns { get; }
     DbSet<EmailLog> EmailLogs { get; }
