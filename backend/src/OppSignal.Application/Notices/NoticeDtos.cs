@@ -79,6 +79,13 @@ public sealed class NoticeDetailDto : NoticeListItemDto
     public bool IsActive { get; set; }
     public List<MatchedProfileDto> MatchedProfiles { get; set; } = new();
     public string? SavedNote { get; set; }
+
+    // AI-generated overview (shared across users; null until enriched).
+    public string? AiSummary { get; set; }
+    public List<string> AiKeyPoints { get; set; } = new();
+    public string? AiFitNote { get; set; }
+    public string? AiModel { get; set; }
+    public DateTime? AiGeneratedAt { get; set; }
 }
 
 public sealed record MatchedProfileDto(Guid ProfileId, string ProfileName, string? MatchReason);

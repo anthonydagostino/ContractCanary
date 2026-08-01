@@ -95,3 +95,23 @@ senior engineer / founder made autonomously so the build could keep moving.
     environment). If `TEST_POSTGRES_ADMIN` is set it instead provisions a fresh
     uniquely-named database on that server — so the suite runs in CI/sandboxes
     where pulling the image is blocked. Documented in README.
+
+20. **AI opportunity summaries are generated once per notice and cached, not
+    per-user.** The summary describes the *opportunity* (identical for everyone),
+    so a background worker job (`SummaryEnrichmentJob`, every ~10 min, newest-first,
+    bounded per pass) summarizes each notice one time and stores it on the
+    `notices` row; every user sees the same summary. Cost therefore scales with
+    new notices (~hundreds/day), not with customer count. Personalization stays in
+    the matching layer. Off by default (`Ai:Enabled=false`, no key) → the app is
+    unchanged; set `AI_ENABLED=true` + `ANTHROPIC_API_KEY` to switch it on.
+
+21. **AI provider = hosted Claude via raw HTTP, structured output, model
+    configurable.** We call the Anthropic Messages API (`IOpportunitySummarizer`)
+    rather than training/hosting a model — summarization is a solved frontier-LLM
+    task and a hosted API is pay-per-use with zero infra. `output_config.format`
+    (JSON schema) guarantees parseable results; the prompt is instructed to use
+    only supplied facts (no invented deadlines/dollars — the UI shows the
+    authoritative deadline from structured data). Default model
+    `claude-haiku-4-5` (cheap bulk); set `AI_MODEL=claude-opus-5` for max quality.
+    Failures return null and retry up to `Ai:MaxAttempts` so one bad record can't
+    stall the batch. Prompt builder + response parser are pure and unit-tested.

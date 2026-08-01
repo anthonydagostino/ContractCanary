@@ -76,6 +76,13 @@ public sealed class NoticeService : INoticeService
         dto.IsActive = notice.IsActive;
         dto.SavedNote = saved?.Note;
         dto.MatchedProfiles = matches.Select(m => new MatchedProfileDto(m.Id, m.Name, m.MatchReason)).ToList();
+        dto.AiSummary = notice.AiSummary;
+        dto.AiKeyPoints = string.IsNullOrWhiteSpace(notice.AiKeyPoints)
+            ? new List<string>()
+            : notice.AiKeyPoints.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        dto.AiFitNote = notice.AiFitNote;
+        dto.AiModel = notice.AiModel;
+        dto.AiGeneratedAt = notice.AiGeneratedAt;
         return dto;
     }
 

@@ -26,6 +26,10 @@ public class NoticeConfiguration : IEntityTypeConfiguration<Notice>
         b.Property(x => x.PopCountry).HasMaxLength(8);
         b.Property(x => x.RawJson).HasColumnType("jsonb");
 
+        // AI summary (generated once per notice; see SummaryEnrichmentService).
+        b.Property(x => x.AiModel).HasMaxLength(64);
+        b.HasIndex(x => x.AiGeneratedAt);
+
         b.HasIndex(x => x.PostedDate);
         b.HasIndex(x => x.ResponseDeadline);
         b.HasIndex(x => x.NaicsCode);

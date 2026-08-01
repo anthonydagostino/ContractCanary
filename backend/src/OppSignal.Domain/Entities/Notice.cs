@@ -59,5 +59,19 @@ public class Notice
     /// <summary>Upstream modified marker used to decide insert-vs-update on upsert.</summary>
     public DateTime? SourceUpdatedAt { get; set; }
 
+    // ---- AI opportunity summary (generated once per notice, shared by all users) ----
+    /// <summary>Plain-English overview of the opportunity. Null until enriched.</summary>
+    public string? AiSummary { get; set; }
+    /// <summary>Short bullet takeaways, newline-separated. Null until enriched.</summary>
+    public string? AiKeyPoints { get; set; }
+    /// <summary>One-line bid/no-bid fit consideration.</summary>
+    public string? AiFitNote { get; set; }
+    /// <summary>Model id that produced the summary (audit / cost tracking).</summary>
+    public string? AiModel { get; set; }
+    /// <summary>When the summary was generated (UTC). Null = not yet summarized.</summary>
+    public DateTime? AiGeneratedAt { get; set; }
+    /// <summary>Enrichment attempts so far; bounds retries on a notice that keeps failing.</summary>
+    public int AiAttempts { get; set; }
+
     public ICollection<NoticeMatch> Matches { get; set; } = new List<NoticeMatch>();
 }

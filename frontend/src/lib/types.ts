@@ -106,6 +106,11 @@ export interface NoticeDetail extends NoticeListItem {
   isActive: boolean
   matchedProfiles: MatchedProfile[]
   savedNote?: string
+  aiSummary?: string
+  aiKeyPoints: string[]
+  aiFitNote?: string
+  aiModel?: string
+  aiGeneratedAt?: string
 }
 
 export interface PagedResult<T> {

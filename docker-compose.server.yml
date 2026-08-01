@@ -82,6 +82,10 @@ services:
       Ingest__Source: "${INGEST_SOURCE:-Fixture}"
       Ingest__IntervalMinutes: "${INGEST_INTERVAL_MINUTES:-180}"
       Sam__ApiKey: "${SAM_API_KEY:-}"
+      # AI opportunity summaries: off unless AI_ENABLED=true + ANTHROPIC_API_KEY are set.
+      Ai__Enabled: "${AI_ENABLED:-false}"
+      Ai__ApiKey: "${ANTHROPIC_API_KEY:-}"
+      Ai__Model: "${AI_MODEL:-claude-haiku-4-5}"
       Email__Provider: "${EMAIL_PROVIDER:-Dev}"
       Email__DevDropPath: "/app/maildrop"
       Email__FromEmail: "${EMAIL_FROM_EMAIL:-digests@contract-canary.com}"

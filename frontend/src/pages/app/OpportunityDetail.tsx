@@ -54,6 +54,8 @@ export function OpportunityDetail() {
           </div>
         )}
 
+        {n.aiSummary && <AiOverview summary={n.aiSummary} keyPoints={n.aiKeyPoints} fitNote={n.aiFitNote} />}
+
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <Field label="Solicitation #" value={n.solicitationNumber} mono />
           <Field label="NAICS" value={n.naicsCode} mono />
@@ -97,6 +99,38 @@ export function OpportunityDetail() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function AiOverview({ summary, keyPoints, fitNote }: { summary: string; keyPoints: string[]; fitNote?: string }) {
+  return (
+    <div className="mt-6 rounded-xl border border-canary-200 bg-canary-50/70 p-5">
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 flex-none items-center justify-center rounded-md bg-canary-400 text-ink-900">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2l1.9 5.8L20 9.7l-4.9 3.6L17 20l-5-3.5L7 20l1.9-6.7L4 9.7l6.1-1.9L12 2z" /></svg>
+        </span>
+        <p className="eyebrow">AI overview</p>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-ink-900">{summary}</p>
+      {keyPoints.length > 0 && (
+        <ul className="mt-3 space-y-1.5">
+          {keyPoints.map((p, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-ink-800">
+              <span className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-canary-500" />
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {fitNote && (
+        <p className="mt-3 rounded-lg border border-canary-200 bg-white/70 px-3 py-2 text-sm text-ink-800">
+          <span className="font-semibold">Fit: </span>{fitNote}
+        </p>
+      )}
+      <p className="mt-3 text-xs text-slate-500">
+        AI-generated overview — always confirm details against the official SAM.gov notice.
+      </p>
     </div>
   )
 }

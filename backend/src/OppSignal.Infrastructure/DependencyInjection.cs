@@ -4,11 +4,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OppSignal.Application.Abstractions;
 using OppSignal.Application.Admin;
+using OppSignal.Application.Ai;
 using OppSignal.Application.Auth;
 using OppSignal.Application.Common;
 using OppSignal.Application.Email;
 using OppSignal.Application.Ingest;
 using OppSignal.Infrastructure.Admin;
+using OppSignal.Infrastructure.Ai;
 using OppSignal.Infrastructure.Auth;
 using OppSignal.Infrastructure.Common;
 using OppSignal.Infrastructure.Email;
@@ -30,6 +32,7 @@ public static class DependencyInjection
         services.Configure<EmailOptions>(config.GetSection(EmailOptions.SectionName));
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
         services.Configure<AuthOptions>(config.GetSection(AuthOptions.SectionName));
+        services.Configure<AiOptions>(config.GetSection(AiOptions.SectionName));
 
         // ---- Database ----
         var connectionString = config.GetConnectionString("Postgres")
@@ -84,6 +87,14 @@ public static class DependencyInjection
         }
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDigestService, DigestService>();
+
+        // ---- AI summaries (off by default; Claude when Ai:Enabled + key are set) ----
+        var aiEnabled = string.Equals(config[$"{AiOptions.SectionName}:Enabled"], "true", StringComparison.OrdinalIgnoreCase);
+        var aiKey = config[$"{AiOptions.SectionName}:ApiKey"];
+        if (aiEnabled && !string.IsNullOrWhiteSpace(aiKey))
+            services.AddHttpClient<IOpportunitySummarizer, ClaudeOpportunitySummarizer>();
+        else
+            services.AddSingleton<IOpportunitySummarizer, DisabledOpportunitySummarizer>();
 
         // ---- Seeders ----
         services.AddScoped<ReferenceSeeder>();

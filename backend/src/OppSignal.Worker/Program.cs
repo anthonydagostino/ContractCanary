@@ -1,4 +1,5 @@
 using OppSignal.Application;
+using OppSignal.Application.Ai;
 using OppSignal.Application.Ingest;
 using OppSignal.Infrastructure;
 using OppSignal.Worker;
@@ -28,6 +29,10 @@ try
     var ingestOptions = config.GetSection(IngestOptions.SectionName).Get<IngestOptions>() ?? new IngestOptions();
     var intervalMinutes = Math.Max(5, ingestOptions.IntervalMinutes);
 
+    var aiOptions = config.GetSection(AiOptions.SectionName).Get<AiOptions>() ?? new AiOptions();
+    var aiEnabled = aiOptions.Enabled && !string.IsNullOrWhiteSpace(aiOptions.ApiKey);
+    var aiIntervalMinutes = Math.Max(2, aiOptions.IntervalMinutes);
+
     // Wait for the DB (API owns migrations/seed) before Quartz fires anything.
     builder.Services.AddHostedService<DatabaseReadyGate>();
 
@@ -47,13 +52,25 @@ try
             .ForJob(digestKey)
             .WithIdentity("digest-trigger")
             .WithCronSchedule("0 0 * * * ?")); // top of every hour; the job filters by each user's local hour
+
+        // AI enrichment only runs when a key is configured; otherwise it's absent entirely.
+        if (aiEnabled)
+        {
+            var aiKey = new JobKey("ai-summary");
+            q.AddJob<SummaryEnrichmentJob>(o => o.WithIdentity(aiKey));
+            q.AddTrigger(t => t
+                .ForJob(aiKey)
+                .WithIdentity("ai-summary-trigger")
+                .StartAt(DateBuilder.FutureDate(45, IntervalUnit.Second))
+                .WithSimpleSchedule(s => s.WithIntervalInMinutes(aiIntervalMinutes).RepeatForever()));
+        }
     });
 
     builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 
     var host = builder.Build();
-    Log.Information("OppSignal Worker starting (ingest every {Interval}m, source {Source})",
-        intervalMinutes, ingestOptions.Source);
+    Log.Information("OppSignal Worker starting (ingest every {Interval}m, source {Source}, ai-summaries {Ai})",
+        intervalMinutes, ingestOptions.Source, aiEnabled ? $"on ({aiOptions.Model}, every {aiIntervalMinutes}m)" : "off");
     host.Run();
 }
 catch (Exception ex)

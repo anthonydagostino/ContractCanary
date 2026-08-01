@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OppSignal.Application.Ai;
 using OppSignal.Application.Billing;
 using OppSignal.Application.Ingest;
 using OppSignal.Application.Matching;
@@ -21,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<INoticeService, NoticeService>();
         services.AddScoped<ISavedNoticeService, SavedNoticeService>();
         services.AddScoped<IReferenceService, ReferenceService>();
+        services.AddScoped<ISummaryEnrichmentService, SummaryEnrichmentService>();
         return services;
     }
 }
