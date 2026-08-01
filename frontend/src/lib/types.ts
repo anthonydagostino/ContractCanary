@@ -129,6 +129,25 @@ export interface UserStats {
   totalActive: number
 }
 
+export type PipelineStatus = 'Reviewing' | 'Pursuing' | 'Submitted' | 'Won' | 'Lost' | 'Passed'
+
+export interface SavedNoticeItem {
+  noticeId: string
+  title: string
+  agencyPath?: string
+  typeLabel: string
+  naicsCode?: string
+  setAside: SetAsideCode
+  setAsideLabel?: string
+  postedDate: string
+  responseDeadline?: string
+  uiLink?: string
+  note?: string
+  status: PipelineStatus
+  savedAt: string
+  isActive: boolean
+}
+
 export interface NaicsDto { code: string; title: string; level: number }
 export interface PscDto { code: string; title: string; category: string; isService: boolean }
 export interface AgencyDto { code: string; name: string; tier: number; parentCode?: string }

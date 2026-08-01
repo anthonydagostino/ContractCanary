@@ -49,10 +49,21 @@ public sealed class NoticesController : ControllerBase
         return File(bytes, "text/csv", $"oppsignal-export-{DateTime.UtcNow:yyyyMMdd}.csv");
     }
 
+    [HttpGet("saved")]
+    public async Task<ActionResult<IReadOnlyList<SavedNoticeDto>>> Saved(CancellationToken ct)
+        => Ok(await _saved.ListAsync(User.GetUserId(), ct));
+
     [HttpPut("{noticeId}/save")]
     public async Task<IActionResult> Save(string noticeId, [FromBody] SaveNoticeRequest? request, CancellationToken ct)
     {
         await _saved.SaveAsync(User.GetUserId(), noticeId, request?.Note, ct);
+        return NoContent();
+    }
+
+    [HttpPut("{noticeId}/status")]
+    public async Task<IActionResult> SetStatus(string noticeId, [FromBody] UpdateStatusRequest request, CancellationToken ct)
+    {
+        await _saved.UpdateStatusAsync(User.GetUserId(), noticeId, request.Status, ct);
         return NoContent();
     }
 

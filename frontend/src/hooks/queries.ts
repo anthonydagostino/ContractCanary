@@ -3,7 +3,8 @@ import { api } from '../lib/api'
 import { noticeQueryString } from '../lib/noticeParams'
 import type {
   AdminMetrics, AgencyDto, MatchProfile, Me, Meta, NaicsDto, NoticeDetail, NoticeListItem,
-  NoticeQueryParams, NoticeTypeDto, PagedResult, ProfileInput, PscDto, SetAsideDto, UserStats,
+  NoticeQueryParams, NoticeTypeDto, PagedResult, PipelineStatus, ProfileInput, PscDto,
+  SavedNoticeItem, SetAsideDto, UserStats,
 } from '../lib/types'
 
 export const queryClient = new QueryClient({
@@ -49,6 +50,18 @@ export function useDeleteProfile() {
 // ---- Notices ----
 export const useUserStats = () =>
   useQuery({ queryKey: ['user-stats'], queryFn: async () => (await api.get<UserStats>('/notices/stats')).data })
+
+export const useSavedNotices = () =>
+  useQuery({ queryKey: ['saved-pipeline'], queryFn: async () => (await api.get<SavedNoticeItem[]>('/notices/saved')).data })
+
+export function useUpdateStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ noticeId, status }: { noticeId: string; status: PipelineStatus }) =>
+      api.put(`/notices/${noticeId}/status`, { status }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['saved-pipeline'] }),
+  })
+}
 
 export const useNotices = (q: NoticeQueryParams) =>
   useQuery({

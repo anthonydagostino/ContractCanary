@@ -45,7 +45,7 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | Branded marketing site + FAQ + comparison + SEO | ✅ Built & on | — |
 | AI opportunity summaries | ✅ Built · dormant | `AI_ENABLED=true` + `ANTHROPIC_API_KEY` (see Part: AI Summaries) |
 | "Your signal" dashboard stats | ✅ Built & on | — |
-| Pipeline tracking on saved opportunities | 🔨 In progress | — |
+| Pipeline tracking on saved opportunities | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
 | Your own admin account + disable demo logins | ⏳ Your task | See Part: Go-live cleanup |
@@ -53,6 +53,11 @@ add a key — exactly like the SAM and email switches — so they never risk the
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- Pipeline tracking: the Saved page is now a pursuit board — every saved
+  opportunity has a stage (Reviewing → Pursuing → Submitted → Won / Lost /
+  Passed), filterable with live counts. Turns alerts into a daily workflow.
+- "Your signal" dashboard stats: a row of clickable cards (new matches this week,
+  closing within 7 days, matched & open, saved) that also filter the list.
 - Landing page: honest "vs. big-budget suites vs. checking SAM.gov yourself"
   comparison, an objection-handling FAQ, and SEO (`robots.txt` + `sitemap.xml`).
 - AI opportunity summaries — a plain-English overview generated once per opportunity
