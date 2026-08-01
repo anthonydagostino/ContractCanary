@@ -31,6 +31,51 @@ up to 100 emails/mo, then ~$15/mo). SAM.gov and Cloudflare DNS are free.
 
 ---
 
+## Feature status — what's built, and what each needs
+
+Engineering keeps this table current. **"Built"** means the code is done, tested, and
+on the live server after your next redeploy (`git pull` + `docker compose -f
+docker-compose.server.yml up -d --build`). Some features stay **dormant** until you
+add a key — exactly like the SAM and email switches — so they never risk the live app.
+
+| Feature | Status | To switch on |
+|---|---|---|
+| Opportunity search, match profiles, daily digest | ✅ Built & on | — (works now) |
+| Real SAM.gov data | ✅ Built & on | Already on (`INGEST_SOURCE=Sam`) |
+| Branded marketing site + FAQ + comparison + SEO | ✅ Built & on | — |
+| AI opportunity summaries | ✅ Built · dormant | `AI_ENABLED=true` + `ANTHROPIC_API_KEY` (see Part: AI Summaries) |
+| "Your signal" dashboard stats | 🔨 In progress | — |
+| Pipeline tracking on saved opportunities | 🔨 In progress | — |
+| Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
+| Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
+| Your own admin account + disable demo logins | ⏳ Your task | See Part: Go-live cleanup |
+| Legal review of ToS/Privacy | ⏳ Your task | 30-min lawyer/paralegal pass |
+
+**Changelog (newest first) — features engineering added after the initial build:**
+
+- Landing page: honest "vs. big-budget suites vs. checking SAM.gov yourself"
+  comparison, an objection-handling FAQ, and SEO (`robots.txt` + `sitemap.xml`).
+- AI opportunity summaries — a plain-English overview generated once per opportunity
+  and shared by all users (see the dedicated part below to turn it on).
+
+### Turning on AI opportunity summaries
+
+One-time: create an Anthropic API key at **console.anthropic.com** (make a key, add a
+little credit). Then on the server, add to `/opt/ContractCanary/.env`:
+
+```
+AI_ENABLED=true
+ANTHROPIC_API_KEY=your-key-here
+AI_MODEL=claude-haiku-4-5
+```
+
+(`claude-haiku-4-5` is cheap and good; use `claude-opus-5` for maximum quality.) Then
+redeploy: `docker compose -f docker-compose.server.yml up -d --build`. Within a few
+minutes an "AI overview" appears on each opportunity. Cost scales with new
+opportunities (~cents each), **not** with how many customers you have.
+
+---
+
 ## Part A — What you need before you start
 
 You need accounts (all free to create) at:

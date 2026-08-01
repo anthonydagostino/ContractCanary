@@ -46,6 +46,42 @@ const features: { icon: (p: IconProps) => ReactNode; title: string; body: string
   { icon: Icon.Briefcase, title: 'Built for small business', body: 'The parts of a five-figure market-intelligence suite that a small contractor actually needs — and nothing you don’t.' },
 ]
 
+const comparison: { label: string; canary: string; suites: string; diy: string }[] = [
+  { label: 'Monthly cost', canary: 'From $29', suites: 'Five figures / year', diy: 'Free (your time)' },
+  { label: 'Setup', canary: 'A few minutes', suites: 'Sales calls + onboarding', diy: 'None' },
+  { label: 'Built for', canary: 'Small contractors', suites: 'Large capture teams', diy: '—' },
+  { label: 'Daily matched digest', canary: 'yes', suites: 'yes', diy: 'no' },
+  { label: 'Plain-English AI summaries', canary: 'yes', suites: 'varies', diy: 'no' },
+  { label: 'Long-term contract required', canary: 'no', suites: 'often', diy: 'no' },
+]
+
+const faqs: { q: string; a: string }[] = [
+  {
+    q: 'Is this an official government service?',
+    a: 'No. ContractCanary is an independent service. We use the free, public SAM.gov Contract Opportunities data, and we are not affiliated with, endorsed by, or sponsored by SAM.gov or the U.S. Government.',
+  },
+  {
+    q: 'How is this different from just checking SAM.gov myself?',
+    a: 'SAM.gov posts thousands of new notices across the whole government. We filter that firehose down to only the opportunities that match your NAICS codes, keywords, agencies, and set-asides, and email them to you once a day — so you stop searching and start seeing only what fits.',
+  },
+  {
+    q: 'Do I need to be technical to use it?',
+    a: 'No. You enter your codes, keywords, and preferences once during setup, and we handle the monitoring and matching for you. If you know what your business does, you can set it up.',
+  },
+  {
+    q: 'Where does the data come from, and how fresh is it?',
+    a: 'Directly from the official SAM.gov Contract Opportunities API. New and updated notices are pulled and matched throughout the day, so your morning digest reflects what was posted.',
+  },
+  {
+    q: 'Can I cancel anytime?',
+    a: 'Yes. Start with a free trial, no credit card required. Cancel anytime — there is no annual lock-in.',
+  },
+  {
+    q: 'What happens on a day with no matching opportunities?',
+    a: 'We send nothing. Zero-match days produce no email. The whole point is signal, not noise.',
+  },
+]
+
 /* ---------- realistic product preview: a daily digest ---------- */
 function DigestPreview() {
   const items = [
@@ -235,6 +271,62 @@ export function Landing() {
         </div>
       </section>
 
+      {/* ---------------- Comparison ---------------- */}
+      <section className="bg-slate-50">
+        <div className="mx-auto max-w-5xl px-4 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="eyebrow">How we compare</span>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-ink-900">Built for you, not for a procurement department</h2>
+          </div>
+          <div className="mt-10 overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="py-3 pr-4 font-medium text-slate-500"></th>
+                  <th className="py-3 px-4">
+                    <span className="font-bold text-ink-900">Contract<span className="text-canary-700">Canary</span></span>
+                  </th>
+                  <th className="py-3 px-4 font-semibold text-slate-600">Big-budget suites</th>
+                  <th className="py-3 px-4 font-semibold text-slate-600">Checking SAM.gov yourself</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparison.map((row) => (
+                  <tr key={row.label} className="border-b border-slate-100">
+                    <td className="py-3 pr-4 font-medium text-ink-900">{row.label}</td>
+                    <td className="py-3 px-4 bg-canary-50/50">
+                      <Cell value={row.canary} highlight />
+                    </td>
+                    <td className="py-3 px-4"><Cell value={row.suites} /></td>
+                    <td className="py-3 px-4"><Cell value={row.diy} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 text-center text-xs text-slate-400">Comparison reflects typical offerings; not an endorsement of or by any named product.</p>
+        </div>
+      </section>
+
+      {/* ---------------- FAQ ---------------- */}
+      <section className="mx-auto max-w-3xl px-4 py-20">
+        <div className="text-center">
+          <span className="eyebrow">FAQ</span>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight text-ink-900">Questions, answered</h2>
+        </div>
+        <div className="mt-10 divide-y divide-slate-200 border-y border-slate-200">
+          {faqs.map((f) => (
+            <details key={f.q} className="group py-4">
+              <summary className="flex cursor-pointer items-center justify-between gap-4 font-medium text-ink-900 marker:content-['']">
+                {f.q}
+                <svg className="h-5 w-5 flex-none text-slate-400 transition group-open:rotate-45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* ---------------- Final CTA ---------------- */}
       <section className="mx-auto max-w-6xl px-4 pb-24">
         <div className="relative overflow-hidden rounded-3xl bg-ink-900 px-6 py-16 text-center shadow-lift sm:px-16">
@@ -251,4 +343,10 @@ export function Landing() {
       </section>
     </MarketingLayout>
   )
+}
+
+function Cell({ value, highlight }: { value: string; highlight?: boolean }) {
+  if (value === 'yes') return <span className="inline-flex items-center gap-1.5 text-emerald-700"><Icon.Check className="h-4 w-4" /> Yes</span>
+  if (value === 'no') return <span className="text-slate-400">—</span>
+  return <span className={highlight ? 'font-semibold text-ink-900' : 'text-slate-600'}>{value}</span>
 }
