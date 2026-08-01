@@ -46,13 +46,19 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | AI opportunity summaries | ✅ Built · dormant | `AI_ENABLED=true` + `ANTHROPIC_API_KEY` (see Part: AI Summaries) |
 | "Your signal" dashboard stats | ✅ Built & on | — |
 | Pipeline tracking on saved opportunities | ✅ Built & on | — |
+| First-run onboarding nudge (create your first alert) | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
 | Your own admin account + disable demo logins | ⏳ Your task | See Part: Go-live cleanup |
 | Legal review of ToS/Privacy | ⏳ Your task | 30-min lawyer/paralegal pass |
 
+**Planned next (engineering, no action needed from you):** amendment & deadline-change
+alerts — flag when a matched/saved opportunity is updated or its deadline moves.
+
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- First-run onboarding: new users with no alerts see a clear "create your first
+  alert" call-to-action on the dashboard, so signups reach value faster.
 - Pipeline tracking: the Saved page is now a pursuit board — every saved
   opportunity has a stage (Reviewing → Pursuing → Submitted → Won / Lost /
   Passed), filterable with live counts. Turns alerts into a daily workflow.

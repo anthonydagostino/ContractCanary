@@ -54,6 +54,20 @@ export function Dashboard() {
         )}
       />
 
+      {/* First-run onboarding: no alert profiles yet */}
+      {profiles && profiles.length === 0 && (
+        <div className="mb-4 rounded-xl border border-canary-200 bg-canary-50/70 p-5 sm:flex sm:items-center sm:justify-between sm:gap-6">
+          <div>
+            <span className="eyebrow">Get started</span>
+            <h2 className="mt-1 text-lg font-semibold text-ink-900">Create your first alert to get matched opportunities</h2>
+            <p className="mt-1 max-w-xl text-sm text-slate-600">
+              Tell us your NAICS codes, keywords, agencies, and set-asides. We’ll match new SAM.gov opportunities to you and email a daily digest of the ones that fit.
+            </p>
+          </div>
+          <Link to="/app/profiles/new" className="btn-primary mt-3 whitespace-nowrap sm:mt-0">Set up my alert →</Link>
+        </div>
+      )}
+
       {/* Your signal */}
       {stats && (
         <div className="mb-4">
