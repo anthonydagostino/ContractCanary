@@ -29,6 +29,9 @@ try
     var services = builder.Services;
     var config = builder.Configuration;
 
+    // ---- Fail fast on a weak/placeholder JWT signing key (outside Development) ----
+    JwtKeyGuard.Validate(config["Jwt:SigningKey"], builder.Environment.IsDevelopment());
+
     // ---- Application + Infrastructure + Billing ----
     services.AddOppSignalApplication();
     services.AddOppSignalInfrastructure(config);
@@ -68,7 +71,12 @@ try
                 ClockSkew = TimeSpan.FromSeconds(30),
             };
         });
-    services.AddAuthorization();
+    // Authenticated-by-default: any endpoint without an explicit [AllowAnonymous]
+    // requires a valid token, so a forgotten [Authorize] can't silently expose data.
+    services.AddAuthorization(o =>
+        o.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build());
 
     // ---- CORS (SPA served separately in dev; same-origin behind Caddy in prod) ----
     var corsOrigins = config.GetSection("Cors:Origins").Get<string[]>()
@@ -123,9 +131,10 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
-    app.MapHealthChecks("/health");
-    app.MapHealthChecks("/health/ready");
-    app.MapGet("/", () => Results.Ok(new { status = "ok", service = "oppsignal-api" }));
+    // Public infrastructure endpoints (the fallback policy would otherwise require auth).
+    app.MapHealthChecks("/health").AllowAnonymous();
+    app.MapHealthChecks("/health/ready").AllowAnonymous();
+    app.MapGet("/", () => Results.Ok(new { status = "ok", service = "oppsignal-api" })).AllowAnonymous();
 
     app.Run();
 }

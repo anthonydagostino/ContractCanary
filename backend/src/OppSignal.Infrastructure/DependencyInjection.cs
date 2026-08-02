@@ -52,6 +52,10 @@ public static class DependencyInjection
             o.Password.RequireUppercase = true;
             o.Password.RequireNonAlphanumeric = false;
             o.SignIn.RequireConfirmedEmail = false; // enforced explicitly in AuthService for a clear message
+            // Per-account lockout to blunt online password guessing (IP rate limiting is the other layer).
+            o.Lockout.AllowedForNewUsers = true;
+            o.Lockout.MaxFailedAccessAttempts = 10;
+            o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         })
         .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<AppDbContext>()

@@ -7,10 +7,15 @@ public class JwtOptions
     public string Issuer { get; set; } = "oppsignal";
     public string Audience { get; set; } = "oppsignal";
 
-    /// <summary>HMAC signing key (>= 32 bytes). MUST be overridden in production via env.</summary>
-    public string SigningKey { get; set; } = "dev-only-insecure-signing-key-change-me-32bytes!";
+    /// <summary>
+    /// HMAC signing key (>= 32 bytes). MUST be set from a secret in production; the
+    /// app refuses to start outside Development with a missing/placeholder key
+    /// (see <c>JwtKeyGuard</c>). Left blank by default so a weak key can never ship.
+    /// </summary>
+    public string SigningKey { get; set; } = "";
 
-    public int AccessTokenMinutes { get; set; } = 60;
+    /// <summary>Short-lived access token. Kept small so logout/reset windows are tight.</summary>
+    public int AccessTokenMinutes { get; set; } = 15;
     public int RefreshTokenDays { get; set; } = 14;
 }
 

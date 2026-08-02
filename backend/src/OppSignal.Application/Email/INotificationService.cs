@@ -10,6 +10,9 @@ public interface INotificationService
     Task SendPasswordResetAsync(Guid userId, string email, string? name, string resetUrl, CancellationToken ct = default);
     Task SendWelcomeAsync(Guid userId, string email, string? name, CancellationToken ct = default);
 
+    /// <summary>Sent when someone tries to register with an already-registered email (non-enumerating signup).</summary>
+    Task SendAccountExistsAsync(Guid userId, string email, string? name, string signInUrl, CancellationToken ct = default);
+
     /// <summary>Send a rendered digest. Returns false if there was nothing to send.</summary>
     Task<bool> SendDigestAsync(DigestModel model, CancellationToken ct = default);
 }

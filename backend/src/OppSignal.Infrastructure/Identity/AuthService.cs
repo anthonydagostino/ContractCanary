@@ -52,8 +52,15 @@ public sealed class AuthService : IAuthService
     public async Task RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
-        if (await _users.FindByEmailAsync(email) is not null)
-            throw new ConflictException("An account with that email already exists.");
+        var existing = await _users.FindByEmailAsync(email);
+        if (existing is not null)
+        {
+            // Don't disclose that the account exists (enumeration). Email the real owner instead;
+            // the endpoint returns the same generic "check your email" response either way.
+            var signInUrl = $"{_branding.WebBaseUrl.TrimEnd('/')}/login";
+            await _notifications.SendAccountExistsAsync(existing.Id, existing.Email!, existing.FullName, signInUrl, ct);
+            return;
+        }
 
         var user = new AppUser
         {
@@ -87,8 +94,25 @@ public sealed class AuthService : IAuthService
     public async Task<AuthTokens> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
         var user = await _users.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
-        if (user is null || !await _users.CheckPasswordAsync(user, request.Password))
+        if (user is null)
+        {
+            // Spend a comparable amount of time hashing so an unknown email can't be
+            // distinguished from a wrong password by response timing (enumeration).
+            _users.PasswordHasher.HashPassword(new AppUser(), request.Password);
             throw new UnauthorizedAppException("Invalid email or password.");
+        }
+
+        if (await _users.IsLockedOutAsync(user))
+            throw new ForbiddenAppException(
+                "This account is temporarily locked after too many failed sign-in attempts. Please try again later.");
+
+        if (!await _users.CheckPasswordAsync(user, request.Password))
+        {
+            await _users.AccessFailedAsync(user); // increments the lockout counter
+            throw new UnauthorizedAppException("Invalid email or password.");
+        }
+
+        await _users.ResetAccessFailedCountAsync(user);
 
         if (_auth.RequireConfirmedEmail && !await _users.IsEmailConfirmedAsync(user))
             throw new ForbiddenAppException("Please verify your email address before signing in.");
@@ -100,8 +124,17 @@ public sealed class AuthService : IAuthService
     {
         var hash = JwtTokenService.Hash(refreshToken);
         var existing = await _db.RefreshTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
-        if (existing is null || !existing.IsActive)
+        if (existing is null)
             throw new UnauthorizedAppException("Invalid or expired refresh token.");
+
+        if (!existing.IsActive)
+        {
+            // A revoked/rotated token being presented again signals possible theft
+            // (the legitimate holder already rotated it). Revoke the whole family so
+            // both the attacker and the victim must re-authenticate.
+            await RevokeAllAsync(existing.UserId, ct);
+            throw new UnauthorizedAppException("Invalid or expired refresh token.");
+        }
 
         var user = await _users.FindByIdAsync(existing.UserId.ToString())
                    ?? throw new UnauthorizedAppException("Invalid refresh token.");

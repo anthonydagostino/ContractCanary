@@ -69,6 +69,16 @@ public sealed class NotificationService : INotificationService
             $"Welcome to {_branding.ProductName}", EmailKind.Welcome, userId, email, name, ct);
     }
 
+    public async Task SendAccountExistsAsync(Guid userId, string email, string? name, string signInUrl, CancellationToken ct = default)
+    {
+        var model = Action("You already have an account",
+            $"Someone tried to sign up for {_branding.ProductName} using this email address, but an account already exists for it. If that was you, just sign in below — or reset your password if you’ve forgotten it.",
+            "Sign in", signInUrl,
+            "If this wasn’t you, no action is needed — your account is safe.", name);
+        await RenderSendLogAsync("Action", model,
+            $"You already have a {_branding.ProductName} account", EmailKind.Welcome, userId, email, name, ct);
+    }
+
     public async Task<bool> SendDigestAsync(DigestModel model, CancellationToken ct = default)
     {
         // never send an empty digest

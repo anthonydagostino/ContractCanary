@@ -9,6 +9,7 @@ namespace OppSignal.Api.Controllers;
 
 [ApiController]
 [Route("api/billing")]
+[Authorize] // class-level default; the webhook opts out with [AllowAnonymous]
 public sealed class BillingController : ControllerBase
 {
     private readonly IBillingService _billing;
