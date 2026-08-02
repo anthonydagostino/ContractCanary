@@ -47,6 +47,7 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | "Your signal" dashboard stats | ✅ Built & on | — |
 | Pipeline tracking on saved opportunities | ✅ Built & on | — |
 | First-run onboarding nudge (create your first alert) | ✅ Built & on | — |
+| "More opportunities like this" on each opportunity | ✅ Built & on | — |
 | Amendment & deadline-change alerts (in-app + in the digest) | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
@@ -59,6 +60,11 @@ per-user in-app notification preferences once there's more to tune.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- "More opportunities like this": every opportunity page now shows a short list of
+  other *currently-open* opportunities in the same NAICS or from the same agency,
+  ranked best-match-first. It answers the single biggest question a buyer has —
+  "is there actually enough here for me?" — by showing the depth of the feed right
+  where they're already looking, and it keeps people browsing instead of bouncing.
 - Change-alerts in the daily digest: the deadline-moved / cancelled alerts that
   already show in-app now also ride along in the daily digest email, in their own
   "Changes to opportunities you're tracking" section at the top (they're the most

@@ -11,6 +11,7 @@ public interface INoticeService
 {
     Task<PagedResult<NoticeListItemDto>> SearchAsync(Guid userId, NoticeQuery query, CancellationToken ct = default);
     Task<NoticeDetailDto> GetDetailAsync(Guid userId, string noticeId, CancellationToken ct = default);
+    Task<IReadOnlyList<NoticeListItemDto>> GetSimilarAsync(Guid userId, string noticeId, int limit = 6, CancellationToken ct = default);
     Task<string> ExportCsvAsync(Guid userId, NoticeQuery query, CancellationToken ct = default);
     Task<UserStatsDto> GetStatsAsync(Guid userId, CancellationToken ct = default);
 }
@@ -90,6 +91,43 @@ public sealed class NoticeService : INoticeService
         dto.AiModel = notice.AiModel;
         dto.AiGeneratedAt = notice.AiGeneratedAt;
         return dto;
+    }
+
+    /// <summary>
+    /// Other currently-open opportunities related to <paramref name="noticeId"/> —
+    /// same NAICS (strongest signal) or same department. Ranked NAICS-first, then
+    /// most recently posted. Returns empty if the notice has nothing to anchor on.
+    /// Read-only discovery: keeps a user browsing and shows the depth of the feed.
+    /// </summary>
+    public async Task<IReadOnlyList<NoticeListItemDto>> GetSimilarAsync(
+        Guid userId, string noticeId, int limit = 6, CancellationToken ct = default)
+    {
+        var notice = await _db.Notices.AsNoTracking().FirstOrDefaultAsync(n => n.NoticeId == noticeId, ct);
+        if (notice is null) return Array.Empty<NoticeListItemDto>();
+
+        var naics = string.IsNullOrEmpty(notice.NaicsCode) ? null : notice.NaicsCode;
+        var dept = string.IsNullOrEmpty(notice.DepartmentName) ? null : notice.DepartmentName;
+        if (naics is null && dept is null) return Array.Empty<NoticeListItemDto>();
+
+        limit = Math.Clamp(limit, 1, 20);
+
+        var ranked = await _db.Notices.AsNoTracking()
+            .Where(n => n.NoticeId != noticeId && n.IsActive
+                && ((naics != null && n.NaicsCode == naics) || (dept != null && n.DepartmentName == dept)))
+            .Select(n => new
+            {
+                Notice = n,
+                Score = (naics != null && n.NaicsCode == naics ? 2 : 0)
+                      + (dept != null && n.DepartmentName == dept ? 1 : 0),
+            })
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => x.Notice.PostedDate)
+            .ThenBy(x => x.Notice.NoticeId)
+            .Take(limit)
+            .Select(x => x.Notice)
+            .ToListAsync(ct);
+
+        return await ProjectAsync(userId, ranked, ct);
     }
 
     public async Task<string> ExportCsvAsync(Guid userId, NoticeQuery q, CancellationToken ct = default)

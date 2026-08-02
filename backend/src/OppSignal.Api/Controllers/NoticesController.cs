@@ -36,6 +36,10 @@ public sealed class NoticesController : ControllerBase
     public async Task<ActionResult<NoticeDetailDto>> Detail(string noticeId, CancellationToken ct)
         => Ok(await _notices.GetDetailAsync(User.GetUserId(), noticeId, ct));
 
+    [HttpGet("{noticeId}/similar")]
+    public async Task<ActionResult<IReadOnlyList<NoticeListItemDto>>> Similar(string noticeId, CancellationToken ct)
+        => Ok(await _notices.GetSimilarAsync(User.GetUserId(), noticeId, ct: ct));
+
     [HttpGet("export.csv")]
     public async Task<IActionResult> ExportCsv([FromQuery] NoticeQuery query, CancellationToken ct)
     {

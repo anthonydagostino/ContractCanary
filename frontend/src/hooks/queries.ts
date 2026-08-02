@@ -100,6 +100,14 @@ export const useNoticeDetail = (noticeId?: string) =>
     enabled: !!noticeId,
   })
 
+export const useSimilarNotices = (noticeId?: string) =>
+  useQuery({
+    queryKey: ['notice-similar', noticeId],
+    queryFn: async () => (await api.get<NoticeListItem[]>(`/notices/${noticeId}/similar`)).data,
+    enabled: !!noticeId,
+    staleTime: 60_000,
+  })
+
 export function useToggleSaved() {
   const qc = useQueryClient()
   return useMutation({

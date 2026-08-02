@@ -1,12 +1,14 @@
 import { Link, useParams } from 'react-router-dom'
 import { useState } from 'react'
-import { useNoticeDetail, useToggleSaved } from '../../hooks/queries'
+import { useNoticeDetail, useSimilarNotices, useToggleSaved } from '../../hooks/queries'
 import { Badge, PageLoader, EmptyState, StarButton } from '../../components/ui'
 import { deadlineLabel, formatDate, formatDateTime } from '../../lib/format'
+import type { NoticeListItem } from '../../lib/types'
 
 export function OpportunityDetail() {
   const { noticeId } = useParams()
   const { data: n, isLoading } = useNoticeDetail(noticeId)
+  const { data: similar } = useSimilarNotices(noticeId)
   const toggle = useToggleSaved()
   const [note, setNote] = useState('')
   const [noteOpen, setNoteOpen] = useState(false)
@@ -99,7 +101,41 @@ export function OpportunityDetail() {
           </div>
         </div>
       )}
+
+      {similar && similar.length > 0 && (
+        <div className="card mt-6 p-6">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-900">More open opportunities like this</p>
+            <span className="text-xs text-slate-400">Same NAICS or agency</span>
+          </div>
+          <div className="mt-3 divide-y divide-slate-100">
+            {similar.map((s) => <SimilarRow key={s.noticeId} item={s} />)}
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function SimilarRow({ item }: { item: NoticeListItem }) {
+  const dl = deadlineLabel(item.responseDeadline)
+  return (
+    <Link
+      to={`/app/opportunities/${item.noticeId}`}
+      className="-mx-2 flex items-start gap-3 rounded-lg px-2 py-3 transition hover:bg-slate-50"
+    >
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-slate-800">{item.title}</p>
+        <p className="mt-0.5 truncate text-xs text-slate-500">{item.agencyPath}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <Badge tone="indigo">{item.typeLabel}</Badge>
+          {item.setAside !== 'None' && item.setAsideLabel && <Badge tone="green">{item.setAsideLabel}</Badge>}
+          {item.isSaved && <Badge tone="amber">Saved</Badge>}
+          {item.isMatched && <Badge tone="blue">Matched</Badge>}
+        </div>
+      </div>
+      <Badge tone={dl.tone}>{dl.text}</Badge>
+    </Link>
   )
 }
 
