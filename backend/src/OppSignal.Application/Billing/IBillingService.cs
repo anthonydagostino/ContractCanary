@@ -20,4 +20,8 @@ public interface IBillingService
 
     /// <summary>Verify + process a Stripe webhook, syncing the local subscription mirror.</summary>
     Task HandleWebhookAsync(string payload, string signatureHeader, CancellationToken ct = default);
+
+    /// <summary>Best-effort cancel the user's Stripe subscription (no-op if billing is
+    /// unconfigured or the user has none). Used on account deletion so a deleted user is never billed.</summary>
+    Task TryCancelSubscriptionAsync(Guid userId, CancellationToken ct = default);
 }

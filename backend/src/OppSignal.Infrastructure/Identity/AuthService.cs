@@ -25,6 +25,7 @@ public sealed class AuthService : IAuthService
     private readonly JwtTokenService _tokens;
     private readonly INotificationService _notifications;
     private readonly IEntitlementService _entitlements;
+    private readonly IBillingService _billing;
     private readonly IClock _clock;
     private readonly AuthOptions _auth;
     private readonly BrandingOptions _branding;
@@ -35,6 +36,7 @@ public sealed class AuthService : IAuthService
         JwtTokenService tokens,
         INotificationService notifications,
         IEntitlementService entitlements,
+        IBillingService billing,
         IClock clock,
         IOptions<AuthOptions> auth,
         IOptions<BrandingOptions> branding)
@@ -44,6 +46,7 @@ public sealed class AuthService : IAuthService
         _tokens = tokens;
         _notifications = notifications;
         _entitlements = entitlements;
+        _billing = billing;
         _clock = clock;
         _auth = auth.Value;
         _branding = branding.Value;
@@ -258,6 +261,47 @@ public sealed class AuthService : IAuthService
         // Changing the password logs out every other session, then re-issues this one.
         await RevokeAllAsync(user.Id, ct);
         return await IssueTokensAsync(user, ct);
+    }
+
+    public async Task<AccountExport> ExportDataAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _users.FindByIdAsync(userId.ToString())
+                   ?? throw new NotFoundException("User not found.");
+
+        var profiles = await _db.MatchProfiles.AsNoTracking().Where(p => p.UserId == userId)
+            .Select(p => new { p.Name, p.Naics, p.Psc, p.Keywords, p.AgencyPaths, p.States, p.SetAsides, p.NoticeTypes, p.IsActive, p.CreatedAt })
+            .ToListAsync(ct);
+        var saved = await _db.SavedNotices.AsNoTracking().Where(s => s.UserId == userId)
+            .Select(s => new { s.NoticeId, s.Note, s.Status, s.SavedAt })
+            .ToListAsync(ct);
+        var alerts = await _db.NoticeAlerts.AsNoTracking().Where(a => a.UserId == userId)
+            .Select(a => new { a.NoticeId, a.Type, a.Message, a.CreatedAt })
+            .ToListAsync(ct);
+
+        var account = new { user.Email, user.FullName, user.CompanyName, user.TimeZoneId, user.CreatedAt };
+        return new AccountExport(account, profiles, saved, alerts, _clock.UtcNow);
+    }
+
+    public async Task DeleteAccountAsync(Guid userId, string password, CancellationToken ct = default)
+    {
+        var user = await _users.FindByIdAsync(userId.ToString())
+                   ?? throw new NotFoundException("User not found.");
+        if (!await _users.CheckPasswordAsync(user, password))
+            throw new BadRequestException("Your password is incorrect.");
+
+        // Stop any recurring billing first so a deleted account is never charged again.
+        await _billing.TryCancelSubscriptionAsync(userId, ct);
+
+        // Purge all personal data (there is no FK cascade from the Identity user to the domain tables).
+        await _db.NoticeAlerts.Where(a => a.UserId == userId).ExecuteDeleteAsync(ct);
+        await _db.SavedNotices.Where(s => s.UserId == userId).ExecuteDeleteAsync(ct);
+        await _db.NoticeMatches.Where(m => m.UserId == userId).ExecuteDeleteAsync(ct);
+        await _db.MatchProfiles.Where(p => p.UserId == userId).ExecuteDeleteAsync(ct);
+        await _db.Subscriptions.Where(s => s.UserId == userId).ExecuteDeleteAsync(ct);
+        await _db.EmailLogs.Where(e => e.UserId == userId).ExecuteDeleteAsync(ct);
+        await _db.RefreshTokens.Where(t => t.UserId == userId).ExecuteDeleteAsync(ct);
+
+        await _users.DeleteAsync(user);
     }
 
     // ---- helpers ------------------------------------------------------------

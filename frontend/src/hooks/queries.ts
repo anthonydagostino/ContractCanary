@@ -177,6 +177,18 @@ export function useChangePassword() {
   })
 }
 
+export function useExportData() {
+  return useMutation({
+    mutationFn: async () => (await api.get('/auth/me/export')).data,
+  })
+}
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: async (password: string) => api.delete('/auth/me', { data: { password } }),
+  })
+}
+
 export function useUpdateAccount() {
   const qc = useQueryClient()
   return useMutation({

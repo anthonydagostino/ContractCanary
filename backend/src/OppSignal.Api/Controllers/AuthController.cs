@@ -107,4 +107,17 @@ public sealed class AuthController : ControllerBase
         await validator.ValidateAndThrowAsync(request, ct);
         return Ok(await _auth.ChangePasswordAsync(User.GetUserId(), request, ct));
     }
+
+    [HttpGet("me/export")]
+    [Authorize]
+    public async Task<ActionResult<AccountExport>> ExportData(CancellationToken ct)
+        => Ok(await _auth.ExportDataAsync(User.GetUserId(), ct));
+
+    [HttpDelete("me")]
+    [Authorize]
+    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountRequest request, CancellationToken ct)
+    {
+        await _auth.DeleteAccountAsync(User.GetUserId(), request.Password, ct);
+        return NoContent();
+    }
 }

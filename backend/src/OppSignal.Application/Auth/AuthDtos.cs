@@ -12,6 +12,15 @@ public sealed record ResetPasswordRequest(string Email, string Token, string New
 public sealed record RefreshRequest(string RefreshToken);
 public sealed record UpdateAccountRequest(string? FullName, string? CompanyName, string? TimeZoneId);
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public sealed record DeleteAccountRequest(string Password);
+
+/// <summary>A user's own data, for the data-export ("download my data") right.</summary>
+public sealed record AccountExport(
+    object Account,
+    IReadOnlyList<object> MatchProfiles,
+    IReadOnlyList<object> SavedOpportunities,
+    IReadOnlyList<object> Alerts,
+    DateTime ExportedAtUtc);
 
 /// <summary>Issued token pair. Access token is a JWT; refresh token is opaque and rotated.</summary>
 public sealed record AuthTokens(string AccessToken, DateTime AccessTokenExpiresAt, string RefreshToken, DateTime RefreshTokenExpiresAt);

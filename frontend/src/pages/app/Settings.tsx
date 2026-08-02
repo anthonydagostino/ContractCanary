@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { PageHeader } from '../../components/PageHeader'
 import { Alert, Badge, Spinner } from '../../components/ui'
-import { useChangePassword, useCheckout, usePortal, useUpdateAccount } from '../../hooks/queries'
+import { useChangePassword, useCheckout, useDeleteAccount, useExportData, usePortal, useUpdateAccount } from '../../hooks/queries'
 import { useAuth } from '../../lib/auth'
 import { apiError } from '../../lib/api'
+import { useNavigate } from 'react-router-dom'
 import { formatDate } from '../../lib/format'
 import type { PlanTier } from '../../lib/types'
 
@@ -124,6 +125,84 @@ export function Settings() {
         </div>
         <p className="text-xs text-slate-400">Billing is handled securely by Stripe. Manage or cancel anytime from the portal.</p>
       </div>
+
+      {/* Your data & account */}
+      <DataAndAccountCard />
+    </div>
+  )
+}
+
+function DataAndAccountCard() {
+  const exportData = useExportData()
+  const deleteAccount = useDeleteAccount()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+
+  async function download() {
+    setError('')
+    try {
+      const data = await exportData.mutateAsync()
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'contractcanary-my-data.json'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(apiError(err, 'Could not export your data.'))
+    }
+  }
+
+  async function confirmDelete(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    try {
+      await deleteAccount.mutateAsync(password)
+      await logout()
+      navigate('/')
+    } catch (err) {
+      setError(apiError(err, 'Could not delete your account.'))
+    }
+  }
+
+  return (
+    <div className="card mt-6 space-y-4 p-6">
+      <p className="text-sm font-semibold text-slate-900">Your data</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button className="btn-secondary" onClick={download} disabled={exportData.isPending}>
+          {exportData.isPending ? <Spinner className="h-4 w-4" /> : 'Download my data'}
+        </button>
+        <p className="text-xs text-slate-400">A JSON file of your account, match profiles, saved opportunities, and alerts.</p>
+      </div>
+
+      <hr className="border-slate-100" />
+
+      <p className="text-sm font-semibold text-red-700">Delete account</p>
+      <p className="text-xs text-slate-500">
+        Permanently deletes your account and all your data, and cancels any active subscription. This cannot be undone.
+      </p>
+      {error && <Alert>{error}</Alert>}
+      {!confirmOpen ? (
+        <button className="btn-secondary border-red-200 text-red-700 hover:bg-red-50" onClick={() => setConfirmOpen(true)}>
+          Delete my account…
+        </button>
+      ) : (
+        <form onSubmit={confirmDelete} className="space-y-3 rounded-lg border border-red-200 bg-red-50/50 p-4">
+          <label className="label">Confirm your password to delete everything</label>
+          <input type="password" autoComplete="current-password" className="input" value={password}
+            onChange={(e) => setPassword(e.target.value)} required />
+          <div className="flex gap-2">
+            <button type="submit" className="btn-primary bg-red-600 hover:bg-red-700" disabled={deleteAccount.isPending}>
+              {deleteAccount.isPending ? <Spinner className="h-4 w-4" /> : 'Permanently delete account'}
+            </button>
+            <button type="button" className="btn-ghost" onClick={() => { setConfirmOpen(false); setPassword('') }}>Cancel</button>
+          </div>
+        </form>
+      )}
     </div>
   )
 }

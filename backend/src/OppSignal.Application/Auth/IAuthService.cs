@@ -18,4 +18,11 @@ public interface IAuthService
     /// <summary>Change the caller's password (verifying the current one) and re-issue tokens;
     /// all other sessions are revoked.</summary>
     Task<AuthTokens> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default);
+
+    /// <summary>Export all of the caller's personal data (right to access / portability).</summary>
+    Task<AccountExport> ExportDataAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Permanently delete the caller's account and all personal data (right to erasure),
+    /// after verifying their password. Cancels any Stripe subscription first.</summary>
+    Task DeleteAccountAsync(Guid userId, string password, CancellationToken ct = default);
 }

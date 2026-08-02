@@ -127,6 +127,22 @@ public sealed class StripeBillingService : IBillingService
         }
     }
 
+    public async Task TryCancelSubscriptionAsync(Guid userId, CancellationToken ct = default)
+    {
+        if (!_options.IsConfigured || _client is null) return;
+        var sub = await _db.Subscriptions.FirstOrDefaultAsync(s => s.UserId == userId, ct);
+        if (string.IsNullOrWhiteSpace(sub?.StripeSubscriptionId)) return;
+        try
+        {
+            await new SubscriptionService(_client).CancelAsync(sub!.StripeSubscriptionId, cancellationToken: ct);
+        }
+        catch (StripeException ex)
+        {
+            // Already-cancelled or missing subscriptions must not block account deletion.
+            _log.LogWarning("Could not cancel Stripe subscription {Sub}: {Message}", sub!.StripeSubscriptionId, ex.Message);
+        }
+    }
+
     // ---- helpers ------------------------------------------------------------
 
     private void EnsureConfigured()
