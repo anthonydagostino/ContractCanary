@@ -62,6 +62,13 @@ per-user in-app notification preferences once there's more to tune.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- Test coverage sweep: added automated tests around every feature built in this
+  push — the saved-opportunities pipeline, the in-app alerts feed, the "these
+  opportunities changed" detection, the dashboard stat cards, "more like this",
+  match backfill, and the digest's deadline reminders — including the tricky edge
+  cases (timezone boundaries, "don't alert twice", user-isolation, empty states).
+  This is the safety net that lets us keep shipping quickly without breaking what
+  already works. (Nothing for you to do — it runs automatically on every change.)
 - Deadline reminders in the daily digest: opportunities you've matched or saved get
   a "Closing soon — don't miss the deadline" nudge in the daily email when their
   response deadline is 7, 3, or 1 days away — at most three gentle reminders each,

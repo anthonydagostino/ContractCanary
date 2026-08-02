@@ -71,6 +71,67 @@ public class NoticeSimilarTests : ApiTestBase
         }
     }
 
+    [Fact]
+    public async Task Similar_surfaces_the_callers_saved_and_matched_flags()
+    {
+        var (_, _, userId) = await RegisterAndLoginAsync($"simflags_{Guid.NewGuid():N}@test.dev");
+        var anchorId = $"ANC-{Guid.NewGuid():N}"[..16];
+        var savedId = $"SAV-{Guid.NewGuid():N}"[..16];
+        var matchedId = $"MAT-{Guid.NewGuid():N}"[..16];
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Notices.AddRange(
+                Seed(anchorId, "541512", "DEPT OF DEFENSE"),
+                Seed(savedId, "541512", "DEPT OF ENERGY"),
+                Seed(matchedId, "541512", "DEPT OF ENERGY"));
+            var profile = new MatchProfile
+            {
+                UserId = userId, Name = "P", Naics = new() { "541512" },
+                IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            db.MatchProfiles.Add(profile);
+            await db.SaveChangesAsync();
+            db.SavedNotices.Add(new SavedNotice { UserId = userId, NoticeId = savedId, SavedAt = DateTime.UtcNow });
+            db.NoticeMatches.Add(new NoticeMatch { UserId = userId, NoticeId = matchedId, MatchProfileId = profile.Id, MatchedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var notices = scope.ServiceProvider.GetRequiredService<INoticeService>();
+            var similar = await notices.GetSimilarAsync(userId, anchorId);
+
+            var saved = similar.Single(s => s.NoticeId == savedId);
+            saved.IsSaved.Should().BeTrue();
+            saved.IsMatched.Should().BeFalse();
+            similar.Single(s => s.NoticeId == matchedId).IsMatched.Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task Similar_respects_the_requested_limit()
+    {
+        var (_, _, userId) = await RegisterAndLoginAsync($"simlimit_{Guid.NewGuid():N}@test.dev");
+        var anchorId = $"ANC-{Guid.NewGuid():N}"[..16];
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Notices.Add(Seed(anchorId, "541512", "DEPT OF DEFENSE"));
+            for (var i = 0; i < 5; i++)
+                db.Notices.Add(Seed($"S{i}-{Guid.NewGuid():N}"[..16], "541512", "DEPT OF ENERGY"));
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var notices = scope.ServiceProvider.GetRequiredService<INoticeService>();
+            (await notices.GetSimilarAsync(userId, anchorId, limit: 2)).Should().HaveCount(2);
+        }
+    }
+
     private static Notice Seed(string id, string? naics, string? dept, bool active = true) => new()
     {
         NoticeId = id,

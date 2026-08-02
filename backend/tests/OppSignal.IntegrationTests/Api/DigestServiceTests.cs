@@ -139,6 +139,48 @@ public class DigestServiceTests : ApiTestBase
     }
 
     [Fact]
+    public async Task SendDueDigests_includes_a_user_whose_only_content_is_a_closing_soon_reminder()
+    {
+        var (_, _, userId) = await RegisterAndLoginAsync($"due_{Guid.NewGuid():N}@test.dev");
+
+        var tz = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var deadlineLocal = nowLocal.Date.AddDays(3).AddHours(12);
+        var deadlineUtc = TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(deadlineLocal, DateTimeKind.Unspecified), tz);
+
+        var noticeId = $"DUE-{Guid.NewGuid():N}"[..16];
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Notices.Add(new Notice
+            {
+                NoticeId = noticeId, Title = "Runway Repair", Type = NoticeType.Solicitation,
+                PostedDate = DateTime.UtcNow.Date.AddDays(-20), ResponseDeadline = deadlineUtc,
+                FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
+            });
+            // Saved (tracked) but NO matches at all → the deadline reminder is the only content.
+            db.SavedNotices.Add(new SavedNotice { UserId = userId, NoticeId = noticeId, SavedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        int sent;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var digest = scope.ServiceProvider.GetRequiredService<IDigestService>();
+            sent = await digest.SendDueDigestsAsync(nowLocal.Hour);
+        }
+
+        sent.Should().BeGreaterThanOrEqualTo(1, "the saved opportunity is 3 days from its deadline");
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.EmailLogs.CountAsync(e => e.UserId == userId && e.Kind == EmailKind.Digest && e.Success))
+                .Should().Be(1);
+        }
+    }
+
+    [Fact]
     public async Task Digest_sends_on_change_alert_alone_and_stamps_it_notified()
     {
         var (_, _, userId) = await RegisterAndLoginAsync($"digestalert_{Guid.NewGuid():N}@test.dev");
