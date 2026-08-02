@@ -51,9 +51,11 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | One-click "alert me about opportunities like this" | ✅ Built & on | — |
 | Amendment & deadline-change alerts (in-app + in the digest) | ✅ Built & on | — |
 | Deadline reminders in the daily digest (7 / 3 / 1 days out) | ✅ Built & on | — |
+| Security hardening (auth, tokens, headers, injection, secrets) | ✅ Built & on | — |
+| In-app change password | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
-| Your own admin account + disable demo logins | ⏳ Your task | See Part: Go-live cleanup |
+| Your own admin account + remove the old demo admin | ⏳ Your task (now mostly automatic) | Set `ADMIN_EMAILS` + `SEED_DEMO=false`, redeploy (Part 11) |
 | Legal review of ToS/Privacy | ⏳ Your task | 30-min lawyer/paralegal pass |
 
 **Planned next (engineering, no action needed from you):** a weekly "what you're
@@ -62,6 +64,18 @@ per-user in-app notification preferences once there's more to tune.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- Security hardening (full audit + fixes): closed a launch-blocking issue where a
+  built-in admin account had a known password — the app now never seeds an admin
+  outside a local demo and auto-locks any leftover default account on deploy (see
+  Part 11). Also: the app refuses to start on a weak/placeholder login-signing key;
+  per-account login lockout after repeated failures; stolen-refresh-token detection;
+  shorter login sessions; signup no longer reveals which emails have accounts;
+  spreadsheet-formula-injection protection on CSV export; input size caps;
+  security headers + HSTS/CSP at the edge; and the login rate-limiter now sees the
+  real visitor IP behind the proxy. All verified by automated tests. **Your only
+  action:** the one-time admin cleanup in Part 11.
+- In-app change password: signed-in users can change their password from Account
+  settings (verifies the current one, signs out other devices).
 - Test coverage sweep: added automated tests around every feature built in this
   push — the saved-opportunities pipeline, the in-app alerts feed, the "these
   opportunities changed" detection, the dashboard stat cards, "more like this",
@@ -612,29 +626,40 @@ verification email, and complete a test subscription.
 
 ---
 
-## Part 11 — Make yourself an admin
+## Part 11 — Make yourself an admin (and remove the old demo admin) — IMPORTANT
 
-Register your account normally (Part 10), then flip the admin flag once. From your SSH
-session on the server:
+The app used to ship a built-in demo admin (`admin@oppsignal.dev` / a password that
+was in the code). That is a security hole for a real launch, so the app now (a) never
+seeds that admin outside a local demo, and (b) **automatically locks any leftover
+demo/admin account that still uses its shipped password** the next time you deploy —
+as long as the demo is turned off. Here's the one-time cleanup:
 
-```bash
-# find the running api container name (usually oppsignal-api-1)
-docker ps --format '{{.Names}}' | grep api
-```
+1. In your server `.env`, set these two lines (create them if missing):
+   ```
+   SEED_DEMO=false
+   ADMIN_EMAILS=you@yourdomain.com
+   ```
+   `ADMIN_EMAILS` grants admin to your own account(s) — comma-separated if more than one.
+2. Register your own account in the app first (Part 10) using that same email.
+3. Redeploy (`git pull` + `docker compose -f docker-compose.server.yml up -d --build`).
 
-The admin flag lives in the database. The simplest way is a one-off SQL command using a
-temporary Postgres client container pointed at your RDS (replace the connection pieces):
+On startup the app will: grant admin to the email(s) in `ADMIN_EMAILS`, and lock the old
+`demo@oppsignal.dev` / `admin@oppsignal.dev` accounts (you'll see a `SECURITY: locked
+seeded default account …` line in the api logs). Nothing to run by hand.
 
-```bash
-docker run --rm postgres:16-alpine psql \
-  "postgresql://oppsignal:YOUR_DB_PASSWORD@YOUR_ENDPOINT:5432/oppsignal?sslmode=require" \
-  -c "UPDATE \"AspNetUsers\" SET \"IsAdmin\" = true WHERE \"Email\" = 'you@yourdomain.com';"
-```
+> If you had already changed the old admin account's password yourself, the app leaves it
+> alone (it only locks accounts still on the shipped default). In that case, delete it
+> manually or just stop using it.
 
 Log out and back in; you'll now see the **Admin** item in the sidebar (users,
 subscribers, notices ingested, emails sent, last ingest status).
 
-✅ **You'll know it worked when** the **Admin** page loads for your account.
+✅ **You'll know it worked when** the **Admin** page loads for *your* account and the
+old `admin@oppsignal.dev` can no longer log in.
+
+> **Also required at launch:** set a strong `POSTGRES_PASSWORD` and a real random
+> `JWT_SIGNING_KEY` (`openssl rand -base64 48`) in `.env` — the app now refuses to start
+> with a missing/placeholder signing key, which is the intended safety net.
 
 ---
 
