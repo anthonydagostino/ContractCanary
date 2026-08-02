@@ -28,9 +28,13 @@
 	}
 
 	header {
-		# Reasonable baseline security headers; tune per your needs.
+		# Security headers. HSTS is ignored by browsers over plain HTTP, so it is
+		# safe to always send (it only takes effect once you're on HTTPS).
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# CSP tuned to this SPA: self-hosted JS/CSS, Google Fonts, same-origin API.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
 	}
 }

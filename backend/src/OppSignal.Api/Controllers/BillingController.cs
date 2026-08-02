@@ -43,6 +43,7 @@ public sealed class BillingController : ControllerBase
     /// <summary>Stripe webhook. Reads the raw body and verifies the signature.</summary>
     [HttpPost("webhook")]
     [AllowAnonymous]
+    [RequestSizeLimit(262_144)] // cap the unauthenticated body (Stripe events are small)
     public async Task<IActionResult> Webhook(CancellationToken ct)
     {
         using var reader = new StreamReader(Request.Body);

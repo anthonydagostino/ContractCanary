@@ -86,6 +86,22 @@ try
         .AllowAnyHeader()
         .AllowAnyMethod()));
 
+    // ---- Forwarded headers (behind Caddy) so the REAL client IP is used ----
+    // Without this the per-IP auth rate limiter would see every request as the
+    // proxy's single IP. Trust X-Forwarded-* only from private networks (the proxy
+    // sits on the internal container network), never from the public internet.
+    services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                             | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+        o.KnownNetworks.Clear();
+        o.KnownProxies.Clear();
+#pragma warning disable CS0618 // AspNetCore IPNetwork is obsolete but is what KnownNetworks expects on net8
+        foreach (var (addr, prefix) in new[] { ("10.0.0.0", 8), ("172.16.0.0", 12), ("192.168.0.0", 16), ("127.0.0.0", 8) })
+            o.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(System.Net.IPAddress.Parse(addr), prefix));
+#pragma warning restore CS0618
+    });
+
     // ---- Rate limiting on auth endpoints ----
     var authPermitLimit = config.GetValue<int?>("RateLimit:AuthPermitLimit") ?? 10;
     services.AddRateLimiter(o =>
@@ -116,6 +132,21 @@ try
     }
 
     // ---- Pipeline ----
+    app.UseForwardedHeaders(); // must run first so downstream sees the real client IP
+
+    // Defense-in-depth security headers (the reverse proxy also sets some; these
+    // guarantee them even if the proxy config changes). HSTS only over HTTPS.
+    app.Use(async (ctx, next) =>
+    {
+        var h = ctx.Response.Headers;
+        h["X-Content-Type-Options"] = "nosniff";
+        h["X-Frame-Options"] = "DENY";
+        h["Referrer-Policy"] = "no-referrer";
+        if (ctx.Request.IsHttps && !ctx.Response.Headers.ContainsKey("Strict-Transport-Security"))
+            h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+        await next();
+    });
+
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseSerilogRequestLogging();
 
