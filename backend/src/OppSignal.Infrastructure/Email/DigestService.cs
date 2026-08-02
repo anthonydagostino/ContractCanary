@@ -28,6 +28,7 @@ public sealed class DigestService : IDigestService
 {
     private const int MaxItemsPerProfile = 20;
     private const int MaxAlerts = 20;
+    private const int MaxReminders = 15;
     private readonly AppDbContext _db;
     private readonly INotificationService _notifications;
     private readonly IEntitlementService _entitlements;
@@ -53,14 +54,37 @@ public sealed class DigestService : IDigestService
 
     public async Task<int> SendDueDigestsAsync(int sendHourLocal, CancellationToken ct = default)
     {
-        // A user is due if they have un-notified matches OR un-notified change-alerts.
+        // A user is due if they have un-notified matches, un-notified change-alerts,
+        // OR a tracked opportunity approaching its deadline (see below).
         var matchUserIds = await _db.NoticeMatches
             .Where(m => m.NotifiedAt == null)
             .Select(m => m.UserId).Distinct().ToListAsync(ct);
         var alertUserIds = await _db.NoticeAlerts
             .Where(a => a.NotifiedAt == null)
             .Select(a => a.UserId).Distinct().ToListAsync(ct);
-        var userIds = matchUserIds.Union(alertUserIds).Distinct().ToList();
+
+        // Candidates for deadline reminders: anyone tracking (matched or saved) an
+        // active notice whose deadline is within ~a week. Deliberately a superset —
+        // the exact 7/3/1-day threshold is applied per-user, in their timezone, in
+        // SendUserDigestAsync. The 8-day window gives slack across time zones.
+        var now = _clock.UtcNow;
+        var soonWindow = now.AddDays(8);
+        var closingNoticeIds = _db.Notices
+            .Where(n => n.IsActive && n.ResponseDeadline != null
+                && n.ResponseDeadline >= now && n.ResponseDeadline <= soonWindow)
+            .Select(n => n.NoticeId);
+        var closingMatchUserIds = await _db.NoticeMatches
+            .Where(m => closingNoticeIds.Contains(m.NoticeId))
+            .Select(m => m.UserId).Distinct().ToListAsync(ct);
+        var closingSavedUserIds = await _db.SavedNotices
+            .Where(s => closingNoticeIds.Contains(s.NoticeId))
+            .Select(s => s.UserId).Distinct().ToListAsync(ct);
+
+        var userIds = matchUserIds
+            .Union(alertUserIds)
+            .Union(closingMatchUserIds)
+            .Union(closingSavedUserIds)
+            .Distinct().ToList();
 
         var sent = 0;
         foreach (var userId in userIds)
@@ -99,9 +123,29 @@ public sealed class DigestService : IDigestService
             .OrderByDescending(x => x.a.CreatedAt)
             .ToListAsync(ct);
 
-        if (rows.Count == 0 && alertRows.Count == 0) return false;
+        // Deadline reminders: active opportunities the user is tracking (matched or
+        // saved) whose deadline is exactly 7 / 3 / 1 days out in their local time.
+        // Threshold-based, so each opportunity nudges at most three times without any
+        // "already reminded" bookkeeping. Brand-new matches shown above are excluded.
+        var nowUtc = _clock.UtcNow;
+        var newMatchIds = rows.Select(x => x.n.NoticeId).ToHashSet();
+        var trackedWithDeadline = await _db.Notices
+            .Where(n => n.IsActive && n.ResponseDeadline != null
+                && (_db.NoticeMatches.Any(m => m.UserId == userId && m.NoticeId == n.NoticeId)
+                    || _db.SavedNotices.Any(s => s.UserId == userId && s.NoticeId == n.NoticeId)))
+            .ToListAsync(ct);
 
-        var localNow = ToLocal(_clock.UtcNow, user.TimeZoneId);
+        var reminders = trackedWithDeadline
+            .Where(n => !newMatchIds.Contains(n.NoticeId))
+            .Select(n => new { Notice = n, Days = DeadlineReminder.ThresholdFor(n.ResponseDeadline!.Value, nowUtc, user.TimeZoneId) })
+            .Where(x => x.Days is not null)
+            .OrderBy(x => x.Days)
+            .ThenBy(x => x.Notice.Title)
+            .ToList();
+
+        if (rows.Count == 0 && alertRows.Count == 0 && reminders.Count == 0) return false;
+
+        var localNow = ToLocal(nowUtc, user.TimeZoneId);
         var model = new DigestModel
         {
             UserId = userId,
@@ -110,6 +154,9 @@ public sealed class DigestService : IDigestService
             DateLabel = localNow.ToString("dddd, MMMM d"),
             WebBaseUrl = _branding.WebBaseUrl,
         };
+
+        foreach (var x in reminders.Take(MaxReminders))
+            model.ClosingSoon.Add(ToClosing(x.Notice, x.Days!.Value, user.TimeZoneId, _branding.WebBaseUrl));
 
         foreach (var x in alertRows.Take(MaxAlerts))
             model.Alerts.Add(ToAlert(x.a, x.Title, _branding.WebBaseUrl));
@@ -148,6 +195,17 @@ public sealed class DigestService : IDigestService
         Message = a.Message,
         IsCancelled = a.Type == Domain.Enums.AlertType.Cancelled,
         DetailLink = $"{webBaseUrl.TrimEnd('/')}/app/opportunities/{a.NoticeId}",
+    };
+
+    private static DigestClosing ToClosing(Notice n, int daysLeft, string tz, string webBaseUrl) => new()
+    {
+        NoticeId = n.NoticeId,
+        Title = n.Title,
+        Agency = n.AgencyPath ?? n.DepartmentName ?? "",
+        DeadlineLabel = n.ResponseDeadline is { } d ? ToLocal(d, tz).ToString("ddd, MMM d, yyyy · h:mm tt") : "",
+        DaysLeft = daysLeft,
+        DetailLink = $"{webBaseUrl.TrimEnd('/')}/app/opportunities/{n.NoticeId}",
+        SamLink = n.UiLink ?? $"https://sam.gov/opp/{n.NoticeId}/view",
     };
 
     private static DigestItem ToItem(Notice n, string tz, string webBaseUrl)

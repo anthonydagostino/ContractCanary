@@ -50,6 +50,7 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | "More opportunities like this" on each opportunity | ✅ Built & on | — |
 | One-click "alert me about opportunities like this" | ✅ Built & on | — |
 | Amendment & deadline-change alerts (in-app + in the digest) | ✅ Built & on | — |
+| Deadline reminders in the daily digest (7 / 3 / 1 days out) | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
 | Your own admin account + disable demo logins | ⏳ Your task | See Part: Go-live cleanup |
@@ -61,6 +62,14 @@ per-user in-app notification preferences once there's more to tune.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- Deadline reminders in the daily digest: opportunities you've matched or saved get
+  a "Closing soon — don't miss the deadline" nudge in the daily email when their
+  response deadline is 7, 3, or 1 days away — at most three gentle reminders each,
+  no spam. It fires even on a day with no new matches, so a deadline on something
+  you're actively chasing never slips by. This is the strongest anti-churn feature
+  for this audience: a contractor's worst outcome is missing a due date, and this
+  is the tool quietly making sure that doesn't happen. (Goes live with your Postmark
+  token; the deadlines are already visible in-app on the Deadlines page.)
 - One-click "alert me about opportunities like this": on any opportunity, a button
   spins up a new match profile pre-filled from that opportunity (its NAICS, or PSC
   if it has no NAICS) — the user just tweaks and saves. This turns a browsing moment

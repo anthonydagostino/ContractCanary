@@ -79,6 +79,66 @@ public class DigestServiceTests : ApiTestBase
     }
 
     [Fact]
+    public async Task Digest_sends_a_deadline_reminder_for_a_tracked_opportunity_closing_in_7_days()
+    {
+        var (_, _, userId) = await RegisterAndLoginAsync($"closing_{Guid.NewGuid():N}@test.dev");
+
+        // Deadline exactly 7 local days out (test users register as America/New_York),
+        // computed in local time so the 7/3/1-day bucketing is deterministic.
+        var tz = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var deadlineLocal = nowLocal.Date.AddDays(7).AddHours(12);
+        var deadlineUtc = TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(deadlineLocal, DateTimeKind.Unspecified), tz);
+
+        var noticeId = $"CLZ-{Guid.NewGuid():N}"[..16];
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Notices.Add(new Notice
+            {
+                NoticeId = noticeId,
+                Title = "Perimeter Fencing Installation",
+                Type = NoticeType.Solicitation,
+                NaicsCode = "238990",
+                AgencyPath = "DEPT OF DEFENSE",
+                PostedDate = DateTime.UtcNow.Date.AddDays(-10),
+                ResponseDeadline = deadlineUtc,
+                FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
+            });
+            var profile = new MatchProfile
+            {
+                UserId = userId, Name = "Fencing", Naics = new() { "238990" },
+                IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            db.MatchProfiles.Add(profile);
+            await db.SaveChangesAsync();
+            // Already-notified match → NOT a "new" match, so the ONLY thing that can
+            // trigger a digest is the closing-soon deadline reminder.
+            db.NoticeMatches.Add(new NoticeMatch
+            {
+                NoticeId = noticeId, MatchProfileId = profile.Id, UserId = userId,
+                MatchedAt = DateTime.UtcNow, NotifiedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var digest = scope.ServiceProvider.GetRequiredService<IDigestService>();
+            (await digest.SendUserDigestAsync(userId))
+                .Should().BeTrue("a tracked opportunity 7 days from its deadline is a reminder-worthy digest");
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.EmailLogs.CountAsync(e => e.UserId == userId && e.Kind == EmailKind.Digest && e.Success))
+                .Should().Be(1);
+        }
+    }
+
+    [Fact]
     public async Task Digest_sends_on_change_alert_alone_and_stamps_it_notified()
     {
         var (_, _, userId) = await RegisterAndLoginAsync($"digestalert_{Guid.NewGuid():N}@test.dev");

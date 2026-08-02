@@ -71,7 +71,8 @@ public sealed class NotificationService : INotificationService
 
     public async Task<bool> SendDigestAsync(DigestModel model, CancellationToken ct = default)
     {
-        if (model.TotalCount == 0 && model.AlertCount == 0) return false; // never send an empty digest
+        // never send an empty digest
+        if (model.TotalCount == 0 && model.AlertCount == 0 && model.ClosingSoonCount == 0) return false;
 
         ApplyBranding(model);
         var html = await _renderer.RenderAsync("Digest", model);
@@ -81,9 +82,13 @@ public sealed class NotificationService : INotificationService
             ? (model.TotalCount == 1
                 ? $"1 new contract opportunity — {model.DateLabel}"
                 : $"{model.TotalCount} new contract opportunities — {model.DateLabel}")
-            : (model.AlertCount == 1
-                ? $"An opportunity you're tracking changed — {model.DateLabel}"
-                : $"{model.AlertCount} opportunities you're tracking changed — {model.DateLabel}");
+            : model.HasAlerts
+                ? (model.AlertCount == 1
+                    ? $"An opportunity you're tracking changed — {model.DateLabel}"
+                    : $"{model.AlertCount} opportunities you're tracking changed — {model.DateLabel}")
+                : (model.ClosingSoonCount == 1
+                    ? $"An opportunity you're tracking is closing soon — {model.DateLabel}"
+                    : $"{model.ClosingSoonCount} opportunities you're tracking are closing soon — {model.DateLabel}");
 
         await SendAndLogAsync(new EmailMessage
         {
@@ -163,12 +168,26 @@ public sealed class NotificationService : INotificationService
     {
         var headline = model.HasMatches
             ? $"{model.TotalCount} new opportunit{(model.TotalCount == 1 ? "y" : "ies")}"
-            : $"{model.AlertCount} update{(model.AlertCount == 1 ? "" : "s")} on opportunities you're tracking";
+            : model.HasAlerts
+                ? $"{model.AlertCount} update{(model.AlertCount == 1 ? "" : "s")} on opportunities you're tracking"
+                : $"{model.ClosingSoonCount} opportunit{(model.ClosingSoonCount == 1 ? "y" : "ies")} closing soon";
         var lines = new List<string>
         {
             $"{model.ProductName} — {headline} ({model.DateLabel})",
             "",
         };
+        if (model.HasClosingSoon)
+        {
+            lines.Add($"== Closing soon ({model.ClosingSoonCount}) ==");
+            foreach (var c in model.ClosingSoon)
+            {
+                lines.Add($"- [{c.DaysLeftLabel}] {c.Title}");
+                lines.Add($"  {c.Agency}");
+                lines.Add($"  Response due: {c.DeadlineLabel}");
+                lines.Add($"  Details: {c.DetailLink}");
+                lines.Add("");
+            }
+        }
         if (model.HasAlerts)
         {
             lines.Add($"== Changes to opportunities you're tracking ({model.AlertCount}) ==");

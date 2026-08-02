@@ -14,8 +14,14 @@ public sealed class DigestModel
     /// <summary>Changes to opportunities the user is tracking (deadline moved / cancelled).</summary>
     public List<DigestAlert> Alerts { get; set; } = new();
     public int AlertCount => Alerts.Count;
+
+    /// <summary>Tracked opportunities whose deadline is 7 / 3 / 1 days out (soonest first).</summary>
+    public List<DigestClosing> ClosingSoon { get; set; } = new();
+    public int ClosingSoonCount => ClosingSoon.Count;
+
     public bool HasMatches => TotalCount > 0;
     public bool HasAlerts => Alerts.Count > 0;
+    public bool HasClosingSoon => ClosingSoon.Count > 0;
 
     // Branding (from BrandingOptions)
     public string ProductName { get; set; } = "OppSignal";
@@ -56,4 +62,17 @@ public sealed class DigestAlert
     public string Message { get; set; } = "";
     public bool IsCancelled { get; set; }
     public string DetailLink { get; set; } = "";
+}
+
+/// <summary>A "closing soon" deadline-reminder line in the digest.</summary>
+public sealed class DigestClosing
+{
+    public string NoticeId { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Agency { get; set; } = "";
+    public string DeadlineLabel { get; set; } = "";
+    public int DaysLeft { get; set; }
+    public string DaysLeftLabel => DaysLeft == 1 ? "Closes tomorrow" : $"Closes in {DaysLeft} days";
+    public string DetailLink { get; set; } = "";
+    public string SamLink { get; set; } = "";
 }
