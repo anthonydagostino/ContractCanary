@@ -35,7 +35,7 @@ public abstract class ApiTestBase : IAsyncLifetime
     {
         var client = NewClient();
         var reg = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password, fullName = "Test User", companyName = "Test Co", timeZoneId = "America/New_York" });
+            new { email, password, fullName = "Test User", companyName = "Test Co", timeZoneId = "America/New_York", acceptedTerms = true });
         reg.EnsureSuccessStatusCode();
 
         var userId = await ConfirmEmailDirectAsync(email);

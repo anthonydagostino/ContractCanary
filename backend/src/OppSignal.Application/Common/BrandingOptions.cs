@@ -20,5 +20,12 @@ public class BrandingOptions
     public string WebBaseUrl { get; set; } = "http://localhost:5173";
 
     public string CompanyLegalName { get; set; } = "Contract Canary";
+
+    /// <summary>Physical mailing address shown in commercial email footers (CAN-SPAM requires one).</summary>
+    public string CompanyPostalAddress { get; set; } = "";
+
+    /// <summary>US state whose law governs the Terms (fill in before launch; a lawyer should confirm).</summary>
+    public string GoverningLawState { get; set; } = "";
+
     public string BrandColor { get; set; } = "#1d4ed8";
 }

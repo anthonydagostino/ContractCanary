@@ -84,7 +84,7 @@ public class AuthHardeningTests : ApiTestBase
     {
         var email = $"dup_{Guid.NewGuid():N}@test.dev";
         var client = NewClient();
-        object Body() => new { email, password = "Password123!", fullName = "A", companyName = "B", timeZoneId = "America/New_York" };
+        object Body() => new { email, password = "Password123!", fullName = "A", companyName = "B", timeZoneId = "America/New_York", acceptedTerms = true };
 
         (await client.PostAsJsonAsync("/api/auth/register", Body())).EnsureSuccessStatusCode();
 

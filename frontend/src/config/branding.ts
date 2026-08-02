@@ -6,15 +6,20 @@
 // ─────────────────────────────────────────────────────────────────────────────
 export const branding = {
   productName: 'ContractCanary',
-  tagline: 'Never miss a federal contract again.',
+  tagline: 'Federal contract opportunities, matched to your business.',
   description:
-    'ContractCanary turns free public procurement data into a daily, personalized signal — so small government contractors never miss a relevant opportunity again.',
+    'ContractCanary turns free public procurement data into a daily, personalized signal that helps small government contractors find and organize relevant opportunities faster.',
   supportEmail: 'support@contract-canary.com',
-  // Marketing one-liners used on the landing page.
+  // Legal/company info. Fill these in before launch (a lawyer should confirm the
+  // Terms details). CANARY: the postal address is required in commercial email footers.
+  companyLegalName: 'Contract Canary',
+  governingLawState: '', // e.g. 'Texas' — set before launch
+  // Marketing one-liners used on the landing page. Phrased as capability claims
+  // (what the tool does), not outcome guarantees, to stay within FTC advertising rules.
   hero: {
     eyebrow: 'Federal contract intelligence for small business',
-    heading: 'Never miss a federal contract that fits your business.',
-    sub: 'We watch SAM.gov for you and email a personalized daily digest of new opportunities matched to your NAICS codes, keywords, agencies, and set-asides. No GovWin budget required.',
+    heading: 'Find the federal contracts that fit your business.',
+    sub: 'We watch SAM.gov for you and email a personalized daily digest of new opportunities matched to your NAICS codes, keywords, agencies, and set-asides — so you spend less time searching. No GovWin budget required.',
   },
 } as const
 

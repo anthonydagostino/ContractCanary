@@ -68,8 +68,11 @@ export function MarketingLayout({ children }: { children: ReactNode }) {
             <p>
               Opportunity data is sourced from{' '}
               <a href="https://sam.gov" target="_blank" rel="noreferrer" className="text-slate-400 underline decoration-slate-600 underline-offset-2 hover:text-slate-200">SAM.gov</a>{' '}
-              (U.S. General Services Administration). {branding.productName} is an independent service and is
-              not affiliated with, endorsed by, or sponsored by SAM.gov or the U.S. Government.
+              (U.S. General Services Administration), where it is available to the public for free.
+              {' '}{branding.productName} is an independent, privately owned service and is
+              not affiliated with, endorsed by, or sponsored by SAM.gov, the GSA, or any U.S. Government agency.
+              Data may be delayed, incomplete, or contain errors — always verify an opportunity against the
+              official listing on SAM.gov before acting on it. Informational only; not legal, financial, or procurement advice.
             </p>
             <p className="mt-3">© {year} {branding.productName}. All rights reserved.</p>
           </div>

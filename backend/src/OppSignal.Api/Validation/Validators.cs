@@ -15,6 +15,9 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
             .Matches("[0-9]").WithMessage("Password must contain a digit.");
         RuleFor(x => x.FullName).MaximumLength(200);
         RuleFor(x => x.CompanyName).MaximumLength(200);
+        // Clickwrap assent — the affirmative act that makes the Terms enforceable.
+        RuleFor(x => x.AcceptedTerms).Equal(true)
+            .WithMessage("You must accept the Terms of Service and Privacy Policy to create an account.");
     }
 }
 

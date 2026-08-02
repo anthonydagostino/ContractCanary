@@ -11,6 +11,7 @@ const guessTz = () => {
 
 export function Register() {
   const [form, setForm] = useState({ fullName: '', companyName: '', email: '', password: '' })
+  const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
@@ -21,7 +22,7 @@ export function Register() {
     e.preventDefault()
     setError(''); setBusy(true)
     try {
-      await api.post('/auth/register', { ...form, timeZoneId: guessTz() })
+      await api.post('/auth/register', { ...form, timeZoneId: guessTz(), acceptedTerms: accepted })
       setDone(true)
     } catch (err) {
       setError(apiError(err, 'Could not create your account.'))
@@ -68,13 +69,17 @@ export function Register() {
           <input id="password" type="password" autoComplete="new-password" required className="input" value={form.password} onChange={set('password')} />
           <p className="mt-1 text-xs text-slate-400">At least 10 characters, with upper, lower, and a number.</p>
         </div>
-        <button type="submit" className="btn-primary w-full" disabled={busy}>
+        <label className="flex items-start gap-2.5 text-xs text-slate-600">
+          <input type="checkbox" required checked={accepted} onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 flex-none rounded border-slate-300" />
+          <span>
+            I agree to the <Link to="/terms" className="font-medium text-brand-700 underline">Terms of Service</Link> and{' '}
+            <Link to="/privacy" className="font-medium text-brand-700 underline">Privacy Policy</Link>.
+          </span>
+        </label>
+        <button type="submit" className="btn-primary w-full" disabled={busy || !accepted}>
           {busy ? <Spinner className="h-4 w-4" /> : 'Create account'}
         </button>
-        <p className="text-center text-xs text-slate-400">
-          By continuing you agree to our <Link to="/terms" className="underline">Terms</Link> and{' '}
-          <Link to="/privacy" className="underline">Privacy Policy</Link>.
-        </p>
       </form>
     </AuthLayout>
   )

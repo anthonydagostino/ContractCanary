@@ -17,7 +17,7 @@ public class AuthFlowTests : ApiTestBase
         var email = $"blocked_{Guid.NewGuid():N}@test.dev";
 
         var reg = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Password123!", fullName = "A", companyName = "B", timeZoneId = "America/New_York" });
+            new { email, password = "Password123!", fullName = "A", companyName = "B", timeZoneId = "America/New_York", acceptedTerms = true });
         reg.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var loginBlocked = await client.PostAsJsonAsync("/api/auth/login", new { email, password = "Password123!" });
@@ -45,7 +45,7 @@ public class AuthFlowTests : ApiTestBase
         var client = NewClient();
         var email = $"refresh_{Guid.NewGuid():N}@test.dev";
         await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Password123!", fullName = "A", companyName = "B", timeZoneId = "America/New_York" });
+            new { email, password = "Password123!", fullName = "A", companyName = "B", timeZoneId = "America/New_York", acceptedTerms = true });
         await ConfirmEmailDirectAsync(email);
         var login = await (await client.PostAsJsonAsync("/api/auth/login", new { email, password = "Password123!" }))
             .Content.ReadFromJsonAsync<TokenResponse>();
