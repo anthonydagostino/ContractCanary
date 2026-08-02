@@ -15,15 +15,18 @@ public sealed class DbInitializer
     private readonly AppDbContext _db;
     private readonly ReferenceSeeder _reference;
     private readonly DemoSeeder _demo;
+    private readonly AccountSafetyGuard _accountSafety;
     private readonly IConfiguration _config;
     private readonly ILogger<DbInitializer> _log;
 
     public DbInitializer(
-        AppDbContext db, ReferenceSeeder reference, DemoSeeder demo, IConfiguration config, ILogger<DbInitializer> log)
+        AppDbContext db, ReferenceSeeder reference, DemoSeeder demo, AccountSafetyGuard accountSafety,
+        IConfiguration config, ILogger<DbInitializer> log)
     {
         _db = db;
         _reference = reference;
         _demo = demo;
+        _accountSafety = accountSafety;
         _config = config;
         _log = log;
     }
@@ -47,6 +50,10 @@ public sealed class DbInitializer
             _log.LogInformation("Seeding demo data…");
             await _demo.SeedAsync(ct);
         }
+
+        // Promote configured admins, and (in real deployments) lock any lingering
+        // default demo/admin accounts that still use their shipped password.
+        await _accountSafety.RunAsync(demoEnabled, ct);
 
         _log.LogInformation("Initialization complete.");
     }

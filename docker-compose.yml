@@ -37,7 +37,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=oppsignal;Username=oppsignal;Password=oppsignal"
-      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_ENVIRONMENT: "Development"
       Ingest__Source: "Fixture"
       Email__Provider: "Dev"
       Email__DevDropPath: "/app/maildrop"

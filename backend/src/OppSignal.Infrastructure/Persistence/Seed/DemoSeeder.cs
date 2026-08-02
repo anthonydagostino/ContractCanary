@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OppSignal.Application.Abstractions;
 using OppSignal.Application.Ingest;
@@ -23,26 +24,36 @@ public sealed class DemoSeeder
     private readonly IIngestService _ingest;
     private readonly IClock _clock;
     private readonly IConfiguration _config;
+    private readonly IHostEnvironment _env;
     private readonly ILogger<DemoSeeder> _log;
 
     public DemoSeeder(
         UserManager<AppUser> users, AppDbContext db, IIngestService ingest,
-        IClock clock, IConfiguration config, ILogger<DemoSeeder> log)
+        IClock clock, IConfiguration config, IHostEnvironment env, ILogger<DemoSeeder> log)
     {
         _users = users;
         _db = db;
         _ingest = ingest;
         _clock = clock;
         _config = config;
+        _env = env;
         _log = log;
     }
 
     public async Task SeedAsync(CancellationToken ct = default)
     {
+        var isDev = _env.IsDevelopment();
         var demoEmail = (_config["Demo:Email"] ?? "demo@oppsignal.dev").ToLowerInvariant();
-        var demoPassword = _config["Demo:Password"] ?? "DemoPassword123!";
         var adminEmail = (_config["Demo:AdminEmail"] ?? "admin@oppsignal.dev").ToLowerInvariant();
-        var adminPassword = _config["Demo:AdminPassword"] ?? "AdminPassword123!";
+        // Outside Development, a real password MUST be configured — never fall back to a shipped default.
+        var demoPassword = _config["Demo:Password"] ?? (isDev ? "DemoPassword123!" : null);
+        var adminPassword = _config["Demo:AdminPassword"] ?? (isDev ? "AdminPassword123!" : null);
+
+        if (demoPassword is null)
+        {
+            _log.LogWarning("Demo seed skipped: set Demo:Password (a default password is only used in Development).");
+            return;
+        }
 
         if (await _users.FindByEmailAsync(demoEmail) is not null)
         {
@@ -51,7 +62,13 @@ public sealed class DemoSeeder
         }
 
         var demo = await CreateUserAsync(demoEmail, demoPassword, "Dana Demo", "Demo Contracting LLC", isAdmin: false, PlanTier.Pro);
-        await CreateUserAsync(adminEmail, adminPassword, "Avery Admin", "OppSignal", isAdmin: true, PlanTier.Pro);
+
+        // An admin account is only ever seeded in Development. In any other environment,
+        // grant admin to your own account via the Admin:PromoteEmails setting instead.
+        if (isDev && adminPassword is not null)
+            await CreateUserAsync(adminEmail, adminPassword, "Avery Admin", "OppSignal", isAdmin: true, PlanTier.Pro);
+        else
+            _log.LogWarning("Admin demo account NOT seeded (Development-only). Use Admin:PromoteEmails to grant admin.");
 
         var now = _clock.UtcNow;
         _db.MatchProfiles.AddRange(

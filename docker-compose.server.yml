@@ -17,7 +17,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: contractcanary
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-changeme_local_db_password}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
       POSTGRES_DB: contractcanary
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -37,7 +37,7 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:-changeme_local_db_password}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
       Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env (openssl rand -base64 48)}"
       Branding__WebBaseUrl: "https://${SITE_ADDRESS}"
       Cors__Origins__0: "https://${SITE_ADDRESS}"
@@ -61,8 +61,10 @@ services:
       Stripe__PortalReturnUrl: "https://${SITE_ADDRESS}/app/settings"
       Branding__ProductName: "${BRANDING_PRODUCT_NAME:-ContractCanary}"
       Branding__SupportEmail: "${BRANDING_SUPPORT_EMAIL:-support@contract-canary.com}"
-      # Seed the demo user/data only while in Fixture mode; set SEED_DEMO=false for real launch.
-      Seed__Demo: "${SEED_DEMO:-true}"
+      # Demo user/data is OFF by default (real launch). Set SEED_DEMO=true only for a throwaway demo box.
+      Seed__Demo: "${SEED_DEMO:-false}"
+      # Grant admin to your own account(s) here (comma-separated emails) — the supported way to get admin.
+      Admin__PromoteEmails: "${ADMIN_EMAILS:-}"
     volumes:
       - maildrop:/app/maildrop
     restart: unless-stopped
@@ -78,7 +80,7 @@ services:
         condition: service_started
     environment:
       DOTNET_ENVIRONMENT: "Production"
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:-changeme_local_db_password}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
       Ingest__Source: "${INGEST_SOURCE:-Fixture}"
       Ingest__IntervalMinutes: "${INGEST_INTERVAL_MINUTES:-180}"
       Sam__ApiKey: "${SAM_API_KEY:-}"

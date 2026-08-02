@@ -103,6 +103,7 @@ public static class DependencyInjection
         // ---- Seeders ----
         services.AddScoped<ReferenceSeeder>();
         services.AddScoped<DemoSeeder>();
+        services.AddScoped<AccountSafetyGuard>();
         services.AddScoped<DbInitializer>();
 
         return services;
