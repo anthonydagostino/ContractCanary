@@ -138,6 +138,7 @@ public sealed class NotificationService : INotificationService
         model.BrandColor = _branding.BrandColor;
         model.SupportEmail = _branding.SupportEmail;
         model.WebBaseUrl = _branding.WebBaseUrl;
+        model.CompanyPostalAddress = _branding.CompanyPostalAddress;
     }
 
     private async Task RenderSendLogAsync(
@@ -223,7 +224,10 @@ public sealed class NotificationService : INotificationService
                 lines.Add("");
             }
         }
-        lines.Add($"Manage your alerts: {model.SettingsUrl}");
+        lines.Add($"Unsubscribe from the digest: {model.UnsubscribeUrl}");
+        lines.Add($"Manage settings: {model.SettingsUrl}");
+        if (!string.IsNullOrWhiteSpace(model.CompanyPostalAddress))
+            lines.Add($"{model.ProductName} · {model.CompanyPostalAddress}");
         return string.Join("\n", lines);
     }
 }

@@ -70,6 +70,7 @@ public static class DependencyInjection
         // ---- Core services ----
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<JwtTokenService>();
+        services.AddScoped<UnsubscribeTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAdminMetricsService, AdminMetricsService>();
 

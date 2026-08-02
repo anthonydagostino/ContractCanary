@@ -17,5 +17,8 @@ public class AppUser : IdentityUser<Guid>
 
     public bool IsAdmin { get; set; }
 
+    /// <summary>Set when the user unsubscribes from the daily opportunity digest (CAN-SPAM opt-out).</summary>
+    public DateTime? DigestOptedOutAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

@@ -31,6 +31,10 @@ public sealed class DigestModel
     public string WebBaseUrl { get; set; } = "";
     public string SettingsUrl => $"{WebBaseUrl.TrimEnd('/')}/app/settings";
     public string DashboardUrl => $"{WebBaseUrl.TrimEnd('/')}/app";
+
+    /// <summary>One-click unsubscribe link (CAN-SPAM) and physical postal address for the footer.</summary>
+    public string UnsubscribeUrl { get; set; } = "";
+    public string CompanyPostalAddress { get; set; } = "";
 }
 
 public sealed class DigestGroup

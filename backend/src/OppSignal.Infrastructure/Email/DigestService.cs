@@ -6,6 +6,7 @@ using OppSignal.Application.Billing;
 using OppSignal.Application.Common;
 using OppSignal.Application.Email;
 using OppSignal.Domain.Entities;
+using OppSignal.Infrastructure.Auth;
 using OppSignal.Infrastructure.Persistence;
 
 namespace OppSignal.Infrastructure.Email;
@@ -32,6 +33,7 @@ public sealed class DigestService : IDigestService
     private readonly AppDbContext _db;
     private readonly INotificationService _notifications;
     private readonly IEntitlementService _entitlements;
+    private readonly UnsubscribeTokenService _unsubscribe;
     private readonly IClock _clock;
     private readonly BrandingOptions _branding;
     private readonly ILogger<DigestService> _log;
@@ -40,6 +42,7 @@ public sealed class DigestService : IDigestService
         AppDbContext db,
         INotificationService notifications,
         IEntitlementService entitlements,
+        UnsubscribeTokenService unsubscribe,
         IClock clock,
         IOptions<BrandingOptions> branding,
         ILogger<DigestService> log)
@@ -47,6 +50,7 @@ public sealed class DigestService : IDigestService
         _db = db;
         _notifications = notifications;
         _entitlements = entitlements;
+        _unsubscribe = unsubscribe;
         _clock = clock;
         _branding = branding.Value;
         _log = log;
@@ -106,6 +110,7 @@ public sealed class DigestService : IDigestService
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user is null || string.IsNullOrWhiteSpace(user.Email)) return false;
+        if (user.DigestOptedOutAt is not null) return false; // honored CAN-SPAM opt-out
 
         var entitlement = await _entitlements.GetAsync(userId, ct);
         if (!entitlement.Limits.DailyDigest) return false; // plan does not include digest (e.g. expired trial)
@@ -153,6 +158,7 @@ public sealed class DigestService : IDigestService
             ToName = user.FullName,
             DateLabel = localNow.ToString("dddd, MMMM d"),
             WebBaseUrl = _branding.WebBaseUrl,
+            UnsubscribeUrl = $"{_branding.WebBaseUrl.TrimEnd('/')}/api/unsubscribe?u={userId}&t={Uri.EscapeDataString(_unsubscribe.Create(userId))}",
         };
 
         foreach (var x in reminders.Take(MaxReminders))
