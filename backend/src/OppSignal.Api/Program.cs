@@ -120,7 +120,7 @@ try
 
     // ---- Health checks ----
     services.AddHealthChecks()
-        .AddDbContextCheck<OppSignal.Infrastructure.Persistence.AppDbContext>("database");
+        .AddDbContextCheck<OppSignal.Infrastructure.Persistence.AppDbContext>("database", tags: new[] { "ready" });
 
     var app = builder.Build();
 
@@ -163,8 +163,16 @@ try
 
     app.MapControllers();
     // Public infrastructure endpoints (the fallback policy would otherwise require auth).
-    app.MapHealthChecks("/health").AllowAnonymous();
-    app.MapHealthChecks("/health/ready").AllowAnonymous();
+    // Liveness: the process is up (no dependency checks) — a DB blip must not crash-loop the container.
+    app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = _ => false,
+    }).AllowAnonymous();
+    // Readiness: safe to receive traffic (includes the database check).
+    app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+    {
+        Predicate = c => c.Tags.Contains("ready"),
+    }).AllowAnonymous();
     app.MapGet("/", () => Results.Ok(new { status = "ok", service = "oppsignal-api" })).AllowAnonymous();
 
     app.Run();

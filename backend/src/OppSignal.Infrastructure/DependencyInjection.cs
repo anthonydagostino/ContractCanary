@@ -39,7 +39,13 @@ public static class DependencyInjection
             ?? config["ConnectionStrings:Postgres"]
             ?? "Host=localhost;Port=5432;Database=oppsignal;Username=oppsignal;Password=oppsignal";
         services.AddDbContext<AppDbContext>(o => o.UseNpgsql(connectionString, npg =>
-            npg.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+        {
+            npg.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+            // Transparently retry transient DB failures (network blips, restarts,
+            // managed-DB failover) instead of surfacing them as 500s.
+            npg.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+            npg.CommandTimeout(30);
+        }));
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         // ---- Identity (UserManager only; SPA uses JWTs, not cookies) ----

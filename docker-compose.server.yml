@@ -37,7 +37,7 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env};Maximum Pool Size=40"
       Jwt__SigningKey: "${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env (openssl rand -base64 48)}"
       Branding__WebBaseUrl: "https://${SITE_ADDRESS}"
       Cors__Origins__0: "https://${SITE_ADDRESS}"
@@ -68,6 +68,7 @@ services:
     volumes:
       - maildrop:/app/maildrop
     restart: unless-stopped
+    stop_grace_period: 40s  # let the worker finish an in-flight job / API drain before SIGKILL
 
   worker:
     build:
@@ -80,7 +81,7 @@ services:
         condition: service_started
     environment:
       DOTNET_ENVIRONMENT: "Production"
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=contractcanary;Username=contractcanary;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env};Maximum Pool Size=15"
       Ingest__Source: "${INGEST_SOURCE:-Fixture}"
       Ingest__IntervalMinutes: "${INGEST_INTERVAL_MINUTES:-180}"
       Sam__ApiKey: "${SAM_API_KEY:-}"
@@ -100,6 +101,7 @@ services:
     volumes:
       - maildrop:/app/maildrop
     restart: unless-stopped
+    stop_grace_period: 40s  # let the worker finish an in-flight job / API drain before SIGKILL
 
   web:
     build:

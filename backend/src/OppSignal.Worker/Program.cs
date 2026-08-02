@@ -44,14 +44,17 @@ try
             .ForJob(ingestKey)
             .WithIdentity("ingest-trigger")
             .StartAt(DateBuilder.FutureDate(30, IntervalUnit.Second)) // give the API time to migrate/seed
-            .WithSimpleSchedule(s => s.WithIntervalInMinutes(intervalMinutes).RepeatForever()));
+            // After downtime, skip missed runs and resume on schedule (no catch-up burst).
+            .WithSimpleSchedule(s => s.WithIntervalInMinutes(intervalMinutes).RepeatForever()
+                .WithMisfireHandlingInstructionNextWithRemainingCount()));
 
         var digestKey = new JobKey("digest");
         q.AddJob<DigestJob>(o => o.WithIdentity(digestKey));
         q.AddTrigger(t => t
             .ForJob(digestKey)
             .WithIdentity("digest-trigger")
-            .WithCronSchedule("0 0 * * * ?")); // top of every hour; the job filters by each user's local hour
+            // A missed hour must NOT double-fire (belt-and-suspenders on top of the per-user local-hour filter).
+            .WithCronSchedule("0 0 * * * ?", x => x.WithMisfireHandlingInstructionDoNothing()));
 
         // AI enrichment only runs when a key is configured; otherwise it's absent entirely.
         if (aiEnabled)
