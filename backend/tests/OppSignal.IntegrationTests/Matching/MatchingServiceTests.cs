@@ -33,7 +33,7 @@ public class MatchingServiceTests : IClassFixture<PostgresTestDatabase>, IAsyncL
         db.MatchProfiles.Add(profile);
         await db.SaveChangesAsync();
 
-        var created = await Service(db).BackfillProfileAsync(profile.Id);
+        var created = await Service(db).BackfillProfileAsync(profile.Id, user);
 
         created.Should().Be(2);
         var matches = await db.NoticeMatches.AsNoTracking().ToListAsync();
@@ -55,11 +55,11 @@ public class MatchingServiceTests : IClassFixture<PostgresTestDatabase>, IAsyncL
         await db.SaveChangesAsync();
         var svc = Service(db);
 
-        (await svc.BackfillProfileAsync(profile.Id)).Should().Be(1); // matches A
+        (await svc.BackfillProfileAsync(profile.Id, user)).Should().Be(1); // matches A
 
         profile.Naics = new() { "236220" };
         await db.SaveChangesAsync();
-        (await svc.BackfillProfileAsync(profile.Id)).Should().Be(1); // now matches B
+        (await svc.BackfillProfileAsync(profile.Id, user)).Should().Be(1); // now matches B
 
         var matches = await db.NoticeMatches.AsNoTracking().ToListAsync();
         matches.Select(m => m.NoticeId).Should().Equal("B");
@@ -76,8 +76,28 @@ public class MatchingServiceTests : IClassFixture<PostgresTestDatabase>, IAsyncL
         db.MatchProfiles.Add(profile);
         await db.SaveChangesAsync();
 
-        (await Service(db).BackfillProfileAsync(profile.Id)).Should().Be(0);
+        (await Service(db).BackfillProfileAsync(profile.Id, user)).Should().Be(0);
         (await db.NoticeMatches.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Backfill_ignores_a_profile_owned_by_another_user()
+    {
+        var owner = Guid.NewGuid();
+        var attacker = Guid.NewGuid();
+        await using var db = _pg.NewContext();
+        db.Notices.Add(TestEntities.Notice("A", naics: "541512", active: true));
+        var profile = TestEntities.Profile(owner, "IT", "541512");
+        db.MatchProfiles.Add(profile);
+        await db.SaveChangesAsync();
+        var svc = Service(db);
+
+        (await svc.BackfillProfileAsync(profile.Id, owner)).Should().Be(1);
+
+        // Passing the owner's profile id with a different userId must be a no-op — no
+        // rebuild and, crucially, no destructive delete of the owner's matches.
+        (await svc.BackfillProfileAsync(profile.Id, attacker)).Should().Be(0);
+        (await db.NoticeMatches.CountAsync(m => m.UserId == owner)).Should().Be(1);
     }
 
     [Fact]

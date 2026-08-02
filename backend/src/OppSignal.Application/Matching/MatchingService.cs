@@ -79,12 +79,13 @@ public sealed class MatchingService : IMatchingService
     /// Existing matches for the profile are cleared first (filters may have
     /// changed). New matches are pre-marked notified so they don't flood a digest.
     /// </summary>
-    public async Task<int> BackfillProfileAsync(Guid profileId, CancellationToken ct = default)
+    public async Task<int> BackfillProfileAsync(Guid profileId, Guid userId, CancellationToken ct = default)
     {
-        var profile = await _db.MatchProfiles.FirstOrDefaultAsync(p => p.Id == profileId, ct);
+        // Scope by userId: a caller can never rebuild/delete matches for a profile it doesn't own.
+        var profile = await _db.MatchProfiles.FirstOrDefaultAsync(p => p.Id == profileId && p.UserId == userId, ct);
         if (profile is null || !profile.IsActive) return 0;
 
-        var stale = await _db.NoticeMatches.Where(m => m.MatchProfileId == profileId).ToListAsync(ct);
+        var stale = await _db.NoticeMatches.Where(m => m.MatchProfileId == profileId && m.UserId == userId).ToListAsync(ct);
         if (stale.Count > 0) _db.NoticeMatches.RemoveRange(stale);
 
         var now = _clock.UtcNow;

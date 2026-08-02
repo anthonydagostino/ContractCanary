@@ -276,11 +276,6 @@ public sealed class NoticeService : INoticeService
         dto.IsMatched = isMatched;
     }
 
-    private static string Csv(string? value)
-    {
-        if (string.IsNullOrEmpty(value)) return "";
-        var needsQuote = value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r');
-        var escaped = value.Replace("\"", "\"\"");
-        return needsQuote ? $"\"{escaped}\"" : escaped;
-    }
+    // RFC4180 quoting + formula-injection neutralization (see CsvUtil).
+    private static string Csv(string? value) => CsvUtil.Cell(value);
 }

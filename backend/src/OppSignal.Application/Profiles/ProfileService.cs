@@ -77,7 +77,7 @@ public sealed class ProfileService : IProfileService
         _db.MatchProfiles.Add(profile);
         await _db.SaveChangesAsync(ct);
 
-        var count = await _matching.BackfillProfileAsync(profile.Id, ct);
+        var count = await _matching.BackfillProfileAsync(profile.Id, userId, ct);
         return MatchProfileDto.From(profile, count);
     }
 
@@ -90,7 +90,7 @@ public sealed class ProfileService : IProfileService
         profile.UpdatedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
 
-        var count = await _matching.BackfillProfileAsync(profile.Id, ct);
+        var count = await _matching.BackfillProfileAsync(profile.Id, userId, ct);
         return MatchProfileDto.From(profile, count);
     }
 

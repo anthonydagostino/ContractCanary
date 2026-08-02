@@ -46,7 +46,13 @@ public sealed class ProfileInputValidator : AbstractValidator<ProfileInput>
         RuleFor(x => x.Naics).Must(l => l.Count <= 100).WithMessage("Too many NAICS codes.");
         RuleFor(x => x.Psc).Must(l => l.Count <= 100).WithMessage("Too many PSC codes.");
         RuleFor(x => x.Keywords).Must(l => l.Count <= 100).WithMessage("Too many keywords.");
+        RuleFor(x => x.AgencyPaths).Must(l => l.Count <= 100).WithMessage("Too many agencies.");
+        RuleFor(x => x.States).Must(l => l.Count <= 60).WithMessage("Too many states.");
+        // Per-element length caps so a huge string can't be stored/scanned (DoS).
+        RuleForEach(x => x.Naics).MaximumLength(20);
+        RuleForEach(x => x.Psc).MaximumLength(20);
         RuleForEach(x => x.Keywords).MaximumLength(100);
+        RuleForEach(x => x.AgencyPaths).MaximumLength(200);
         RuleForEach(x => x.States).Matches("^[A-Za-z]{2}$").WithMessage("States must be 2-letter codes.");
         RuleFor(x => x).Must(HasAtLeastOneCriterion)
             .WithMessage("A profile needs at least one NAICS, PSC, or keyword to match on.");

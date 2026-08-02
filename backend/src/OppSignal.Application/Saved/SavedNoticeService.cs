@@ -27,8 +27,13 @@ public sealed class SavedNoticeService : ISavedNoticeService
         _clock = clock;
     }
 
+    private const int MaxNoteLength = 2000;
+
     public async Task SaveAsync(Guid userId, string noticeId, string? note, CancellationToken ct = default)
     {
+        if (note is not null && note.Trim().Length > MaxNoteLength)
+            throw new BadRequestException($"A note can be at most {MaxNoteLength} characters.");
+
         var exists = await _db.Notices.AnyAsync(n => n.NoticeId == noticeId, ct);
         if (!exists) throw new NotFoundException("Opportunity not found.");
 
