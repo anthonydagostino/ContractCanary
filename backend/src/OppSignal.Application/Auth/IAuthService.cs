@@ -14,4 +14,8 @@ public interface IAuthService
 
     Task<MeDto> GetMeAsync(Guid userId, CancellationToken ct = default);
     Task UpdateAccountAsync(Guid userId, UpdateAccountRequest request, CancellationToken ct = default);
+
+    /// <summary>Change the caller's password (verifying the current one) and re-issue tokens;
+    /// all other sessions are revoked.</summary>
+    Task<AuthTokens> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default);
 }

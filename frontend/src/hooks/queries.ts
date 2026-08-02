@@ -1,8 +1,8 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
+import { api, storeTokens } from '../lib/api'
 import { noticeQueryString } from '../lib/noticeParams'
 import type {
-  AdminMetrics, AgencyDto, Alert, MatchProfile, Me, Meta, NaicsDto, NoticeDetail, NoticeListItem,
+  AdminMetrics, AgencyDto, Alert, AuthTokens, MatchProfile, Me, Meta, NaicsDto, NoticeDetail, NoticeListItem,
   NoticeQueryParams, NoticeTypeDto, PagedResult, PipelineStatus, ProfileInput, PscDto,
   SavedNoticeItem, SetAsideDto, UserStats,
 } from '../lib/types'
@@ -167,6 +167,16 @@ export const useAdminMetrics = () =>
   useQuery({ queryKey: ['admin-metrics'], queryFn: async () => (await api.get<AdminMetrics>('/admin/metrics')).data })
 
 // ---- Account ----
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (input: { currentPassword: string; newPassword: string }) => {
+      const { data } = await api.post<AuthTokens>('/auth/change-password', input)
+      storeTokens(data) // the old refresh token was revoked; adopt the new pair for this session
+      return data
+    },
+  })
+}
+
 export function useUpdateAccount() {
   const qc = useQueryClient()
   return useMutation({

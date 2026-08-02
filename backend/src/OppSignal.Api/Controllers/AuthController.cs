@@ -98,4 +98,13 @@ public sealed class AuthController : ControllerBase
         await _auth.UpdateAccountAsync(User.GetUserId(), request, ct);
         return NoContent();
     }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<ActionResult<AuthTokens>> ChangePassword(
+        [FromBody] ChangePasswordRequest request, [FromServices] IValidator<ChangePasswordRequest> validator, CancellationToken ct)
+    {
+        await validator.ValidateAndThrowAsync(request, ct);
+        return Ok(await _auth.ChangePasswordAsync(User.GetUserId(), request, ct));
+    }
 }

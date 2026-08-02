@@ -240,6 +240,26 @@ public sealed class AuthService : IAuthService
             throw new BadRequestException(string.Join(" ", result.Errors.Select(e => e.Description)));
     }
 
+    public async Task<AuthTokens> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default)
+    {
+        var user = await _users.FindByIdAsync(userId.ToString())
+                   ?? throw new NotFoundException("User not found.");
+
+        var result = await _users.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            // Distinguish a wrong current password from a policy failure without leaking specifics.
+            var passwordMismatch = result.Errors.Any(e => e.Code == "PasswordMismatch");
+            throw new BadRequestException(passwordMismatch
+                ? "Your current password is incorrect."
+                : string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        // Changing the password logs out every other session, then re-issues this one.
+        await RevokeAllAsync(user.Id, ct);
+        return await IssueTokensAsync(user, ct);
+    }
+
     // ---- helpers ------------------------------------------------------------
 
     private async Task SendVerificationAsync(AppUser user, CancellationToken ct)

@@ -38,6 +38,19 @@ public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPassw
     }
 }
 
+public sealed class ChangePasswordRequestValidator : AbstractValidator<ChangePasswordRequest>
+{
+    public ChangePasswordRequestValidator()
+    {
+        RuleFor(x => x.CurrentPassword).NotEmpty();
+        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(10).MaximumLength(128)
+            .Matches("[A-Z]").WithMessage("Password must contain an uppercase letter.")
+            .Matches("[a-z]").WithMessage("Password must contain a lowercase letter.")
+            .Matches("[0-9]").WithMessage("Password must contain a digit.")
+            .NotEqual(x => x.CurrentPassword).WithMessage("Choose a password different from your current one.");
+    }
+}
+
 public sealed class ProfileInputValidator : AbstractValidator<ProfileInput>
 {
     public ProfileInputValidator()

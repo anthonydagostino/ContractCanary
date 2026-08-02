@@ -11,6 +11,7 @@ public sealed record ForgotPasswordRequest(string Email);
 public sealed record ResetPasswordRequest(string Email, string Token, string NewPassword);
 public sealed record RefreshRequest(string RefreshToken);
 public sealed record UpdateAccountRequest(string? FullName, string? CompanyName, string? TimeZoneId);
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 /// <summary>Issued token pair. Access token is a JWT; refresh token is opaque and rotated.</summary>
 public sealed record AuthTokens(string AccessToken, DateTime AccessTokenExpiresAt, string RefreshToken, DateTime RefreshTokenExpiresAt);

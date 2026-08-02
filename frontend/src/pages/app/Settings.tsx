@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { PageHeader } from '../../components/PageHeader'
 import { Alert, Badge, Spinner } from '../../components/ui'
-import { useCheckout, usePortal, useUpdateAccount } from '../../hooks/queries'
+import { useChangePassword, useCheckout, usePortal, useUpdateAccount } from '../../hooks/queries'
 import { useAuth } from '../../lib/auth'
 import { apiError } from '../../lib/api'
 import { formatDate } from '../../lib/format'
@@ -91,6 +91,9 @@ export function Settings() {
         </button>
       </form>
 
+      {/* Password */}
+      <ChangePasswordCard />
+
       {/* Billing */}
       <div className="card space-y-4 p-6">
         <div className="flex items-center justify-between">
@@ -122,5 +125,57 @@ export function Settings() {
         <p className="text-xs text-slate-400">Billing is handled securely by Stripe. Manage or cancel anytime from the portal.</p>
       </div>
     </div>
+  )
+}
+
+function ChangePasswordCard() {
+  const change = useChangePassword()
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setDone(false)
+    if (next !== confirm) { setError('The new passwords do not match.'); return }
+    try {
+      await change.mutateAsync({ currentPassword: current, newPassword: next })
+      setCurrent(''); setNext(''); setConfirm('')
+      setDone(true)
+    } catch (err) {
+      setError(apiError(err, 'Could not change your password.'))
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="card mb-6 space-y-4 p-6">
+      <p className="text-sm font-semibold text-slate-900">Password</p>
+      {done && <Alert tone="green">Password changed. Other devices have been signed out.</Alert>}
+      {error && <Alert>{error}</Alert>}
+      <div>
+        <label className="label">Current password</label>
+        <input type="password" autoComplete="current-password" className="input" value={current}
+          onChange={(e) => setCurrent(e.target.value)} required />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="label">New password</label>
+          <input type="password" autoComplete="new-password" className="input" value={next}
+            onChange={(e) => setNext(e.target.value)} required minLength={10} />
+        </div>
+        <div>
+          <label className="label">Confirm new password</label>
+          <input type="password" autoComplete="new-password" className="input" value={confirm}
+            onChange={(e) => setConfirm(e.target.value)} required minLength={10} />
+        </div>
+      </div>
+      <p className="text-xs text-slate-400">At least 10 characters, with an uppercase letter, a lowercase letter, and a digit.</p>
+      <button type="submit" className="btn-primary" disabled={change.isPending}>
+        {change.isPending ? <Spinner className="h-4 w-4" /> : 'Change password'}
+      </button>
+    </form>
   )
 }
