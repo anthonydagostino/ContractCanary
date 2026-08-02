@@ -63,6 +63,15 @@ public sealed class StripeBillingService : IBillingService
             SuccessUrl = _options.SuccessUrl,
             CancelUrl = _options.CancelUrl,
             Metadata = new Dictionary<string, string> { ["userId"] = userId.ToString(), ["plan"] = plan.ToString() },
+            // Auto-renewal disclosure on the hosted checkout page (ROSCA / state ARL).
+            CustomText = new SessionCustomTextOptions
+            {
+                Submit = new SessionCustomTextSubmitOptions
+                {
+                    Message = "Your subscription renews automatically each month until you cancel. " +
+                              "You can cancel anytime from Settings → Manage billing.",
+                },
+            },
         };
 
         var session = await new SessionService(_client).CreateAsync(options, cancellationToken: ct);

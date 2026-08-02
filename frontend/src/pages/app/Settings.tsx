@@ -5,6 +5,7 @@ import { useChangePassword, useCheckout, useDeleteAccount, useExportData, usePor
 import { useAuth } from '../../lib/auth'
 import { apiError } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
+import { branding } from '../../config/branding'
 import { formatDate } from '../../lib/format'
 import type { PlanTier } from '../../lib/types'
 
@@ -22,6 +23,7 @@ export function Settings() {
   const [form, setForm] = useState({ fullName: '', companyName: '', timeZoneId: 'America/New_York' })
   const [savedMsg, setSavedMsg] = useState('')
   const [billingError, setBillingError] = useState('')
+  const [renewalConsent, setRenewalConsent] = useState(false)
 
   useEffect(() => {
     if (me) setForm({ fullName: me.fullName ?? '', companyName: me.companyName ?? '', timeZoneId: me.timeZoneId })
@@ -112,18 +114,37 @@ export function Settings() {
 
         {billingError && <Alert>{billingError}</Alert>}
 
+        {me.plan !== 'Pro' && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+            <p className="font-medium text-slate-700">Before you subscribe</p>
+            <p className="mt-1">
+              Paid plans are billed monthly in advance and <strong>renew automatically each month at the listed
+              price until you cancel.</strong> You can cancel anytime under <strong>Manage billing</strong> (or email {' '}
+              {branding.supportEmail}); cancelling stops future charges and you keep access through the paid period.
+              Fees are non-refundable for partial months (see our <a href="/terms" className="underline">Terms</a>).
+            </p>
+            <label className="mt-2 flex items-start gap-2">
+              <input type="checkbox" checked={renewalConsent} onChange={(e) => setRenewalConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-none rounded border-slate-300" />
+              <span>I understand my subscription renews automatically each month until I cancel.</span>
+            </label>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-3">
-          {me.plan !== 'Starter' && (
-            <button className="btn-secondary" onClick={() => startCheckout('Starter')} disabled={checkout.isPending}>Choose Starter — $29/mo</button>
+          {me.plan !== 'Starter' && me.plan !== 'Pro' && (
+            <button className="btn-secondary" onClick={() => startCheckout('Starter')} disabled={checkout.isPending || !renewalConsent}>
+              Subscribe to Starter — $29/mo, auto-renews
+            </button>
           )}
           {me.plan !== 'Pro' && (
-            <button className="btn-primary" onClick={() => startCheckout('Pro')} disabled={checkout.isPending}>
-              {checkout.isPending ? <Spinner className="h-4 w-4" /> : 'Upgrade to Pro — $79/mo'}
+            <button className="btn-primary" onClick={() => startCheckout('Pro')} disabled={checkout.isPending || !renewalConsent}>
+              {checkout.isPending ? <Spinner className="h-4 w-4" /> : 'Subscribe to Pro — $79/mo, auto-renews'}
             </button>
           )}
           <button className="btn-ghost" onClick={openPortal} disabled={portal.isPending}>Manage billing</button>
         </div>
-        <p className="text-xs text-slate-400">Billing is handled securely by Stripe. Manage or cancel anytime from the portal.</p>
+        <p className="text-xs text-slate-400">Billing is handled securely by Stripe. Cancel anytime from Manage billing.</p>
       </div>
 
       {/* Your data & account */}
