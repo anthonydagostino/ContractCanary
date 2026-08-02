@@ -53,6 +53,12 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | Deadline reminders in the daily digest (7 / 3 / 1 days out) | ✅ Built & on | — |
 | Security hardening (auth, tokens, headers, injection, secrets) | ✅ Built & on | — |
 | In-app change password | ✅ Built & on | — |
+| Data rights: download-my-data + delete-my-account | ✅ Built & on | — |
+| Legal docs (strong ToS + Privacy) + clickwrap consent at signup | ✅ Built & on | ⚠️ lawyer review + set your state |
+| Subscription auto-renewal disclosure + consent at checkout | ✅ Built & on | — |
+| Government/accuracy disclaimers + honest marketing copy | ✅ Built & on | — |
+| CAN-SPAM one-click unsubscribe + postal address in digest | ✅ Built & on | Set `BRANDING_POSTAL_ADDRESS` before real email |
+| Production resilience (DB retry, pool sizing, graceful shutdown) | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
 | Your own admin account + remove the old demo admin | ⏳ Your task (now mostly automatic) | Set `ADMIN_EMAILS` + `SEED_DEMO=false`, redeploy (Part 11) |
@@ -64,6 +70,19 @@ per-user in-app notification preferences once there's more to tune.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- Launch-readiness pass (liability, compliance & scaling): after researching what
+  established SaaS do — negative-option/auto-renewal law (ROSCA + state ARLs), the
+  FTC "click-to-cancel" rule status, CalOPPA/CCPA/GDPR, CAN-SPAM, ADA/WCAG, FTC
+  advertising rules, and production-scaling best practices — I implemented the
+  liability-reducing pieces: strong Terms of Service + Privacy Policy with a real
+  clickwrap "I agree" checkbox at signup; auto-renewal disclosure + affirmative
+  consent at checkout; a not-affiliated-with-the-government + "verify on SAM.gov"
+  disclaimer; marketing copy scrubbed of implied guarantees; a working one-click
+  email unsubscribe + postal address in the digest; self-service data download and
+  account deletion; and resilience upgrades (DB retry, connection-pool sizing,
+  graceful shutdown, liveness/readiness split). **See the new "Before you launch:
+  compliance & liability" section below for exactly what's done and the short list
+  of things only you (and a lawyer) can finish.**
 - Security hardening (full audit + fixes): closed a launch-blocking issue where a
   built-in admin account had a known password — the app now never seeds an admin
   outside a local demo and auto-locks any leftover default account on deploy (see
@@ -145,6 +164,68 @@ minutes an "AI overview" appears on each opportunity. Cost scales with new
 opportunities (~cents each), **not** with how many customers you have.
 
 ---
+
+## Before you launch: compliance & liability (READ THIS)
+
+I researched what established SaaS businesses do to reduce the owner's liability when
+selling a monthly subscription, vetted it against primary sources (FTC, state laws,
+Stripe, WCAG), and built the parts that are code. **None of this is legal advice, and a
+licensed attorney must review your final Terms, Privacy Policy, and refund language
+before you take real payments.** Here's the split.
+
+**✅ Done in the app (nothing for you to do):**
+- **Terms of Service & Privacy Policy** rewritten to the standard protective baseline —
+  "as-is" disclaimer, liability cap, *no guarantee you'll win contracts*, indemnity,
+  arbitration + class-action waiver (with a 30-day opt-out), force majeure that covers
+  SAM.gov/Stripe/email outages and government shutdowns; and a CalOPPA/CCPA-ready privacy
+  policy (what's collected, who processes it, "we don't sell your data," Do-Not-Track,
+  retention, your rights, breach, children). Shown at `/terms` and `/privacy`.
+- **Clickwrap consent:** signup now requires ticking "I agree to the Terms and Privacy
+  Policy" — this is what makes the Terms actually enforceable.
+- **Auto-renewal compliance at checkout:** a clear "renews automatically each month until
+  you cancel / cancel anytime" disclosure and a required consent checkbox before payment,
+  plus the same message on Stripe's page. Cancellation is self-service via the Stripe
+  portal (as easy as signup — this is the "click-to-cancel" standard).
+- **Not-affiliated-with-the-government + "verify on SAM.gov"** disclaimer in the footer
+  and Terms; marketing copy scrubbed of implied guarantees ("never miss a contract" →
+  honest capability claims) to stay within FTC advertising rules.
+- **Email (CAN-SPAM):** the daily digest now has a one-click unsubscribe (no login needed)
+  and will show your postal address; account/receipt emails are unaffected.
+- **Your data rights:** users can download their data and permanently delete their account
+  (which also cancels their Stripe subscription) — CCPA/GDPR-ready.
+- **PCI:** because all card entry happens on Stripe's hosted pages, you're in the lightest
+  scope (SAQ A) — you never touch card numbers.
+
+**⚠️ Only you can finish these (quick, but important):**
+1. **Have a lawyer review** `/terms` and `/privacy` and your refund policy. Budget one
+   short paralegal/attorney pass. The in-app pages show a "pending legal review" banner —
+   remove it (in `frontend/src/pages/Legal.tsx`) once reviewed.
+2. **Set your governing-law state and company info.** In
+   `frontend/src/config/branding.ts` set `companyLegalName` and `governingLawState`
+   (e.g. `'Texas'`), then rebuild. Set `BRANDING_POSTAL_ADDRESS` in `.env` (a real street
+   address, USPS PO Box, or registered mailbox) — **required in the digest footer before
+   you turn on real email.**
+3. **In the Stripe Dashboard:** set a recognizable **statement descriptor** (e.g.
+   `CONTRACTCANARY`) so charges are recognized (cuts chargebacks); turn on **email
+   receipts**; make sure the **Customer Portal has "cancel subscription" enabled**; and add
+   your Terms URL under checkout settings if you want Stripe to collect ToS acceptance too.
+4. **In Postmark:** send the **digest on a "Broadcast" message stream** and
+   verification/receipts on a "Transactional" stream (Broadcasts enforce unsubscribe and
+   protect deliverability).
+5. **Accessibility (ADA/WCAG 2.1 AA):** website-accessibility lawsuits are common. A full
+   pass is a small project; the highest-value fixes, in order, are: color contrast → image
+   alt text → form labels → `aria-label` on icon-only buttons → visible keyboard focus →
+   landmarks + skip-to-content link → text-based error messages. Consider an accessibility
+   statement page. (Flagged as a recommended next pass, not a blocker to first launch.)
+
+**🗄️ Operations you should set up (existential):**
+6. **Backups + a *tested* restore.** Your single-box Postgres has none today — one bad
+   command or disk failure = total data loss. Easiest: move to **DigitalOcean Managed
+   Postgres** (daily backups + point-in-time restore; the app already supports an external
+   DB via `CONNECTIONSTRINGS_POSTGRES`). Or add a nightly `pg_dump` to object storage. Then
+   actually restore one dump to confirm it works.
+7. **Know when something breaks:** add **Sentry** (free tier) for error alerts and a free
+   **uptime monitor** (UptimeRobot / Better Stack) hitting `/health` every minute.
 
 ## Part A — What you need before you start
 

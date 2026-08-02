@@ -61,6 +61,8 @@ services:
       Stripe__PortalReturnUrl: "https://${SITE_ADDRESS}/app/settings"
       Branding__ProductName: "${BRANDING_PRODUCT_NAME:-ContractCanary}"
       Branding__SupportEmail: "${BRANDING_SUPPORT_EMAIL:-support@contract-canary.com}"
+      # Physical mailing address for the digest email footer (CAN-SPAM). Required before real email.
+      Branding__CompanyPostalAddress: "${BRANDING_POSTAL_ADDRESS:-}"
       # Demo user/data is OFF by default (real launch). Set SEED_DEMO=true only for a throwaway demo box.
       Seed__Demo: "${SEED_DEMO:-false}"
       # Grant admin to your own account(s) here (comma-separated emails) — the supported way to get admin.
@@ -97,6 +99,8 @@ services:
       Digest__SendHourLocal: "${DIGEST_SEND_HOUR_LOCAL:-7}"
       Branding__ProductName: "${BRANDING_PRODUCT_NAME:-ContractCanary}"
       Branding__SupportEmail: "${BRANDING_SUPPORT_EMAIL:-support@contract-canary.com}"
+      # Physical mailing address for the digest email footer (CAN-SPAM). Required before real email.
+      Branding__CompanyPostalAddress: "${BRANDING_POSTAL_ADDRESS:-}"
       Branding__WebBaseUrl: "https://${SITE_ADDRESS}"
     volumes:
       - maildrop:/app/maildrop
