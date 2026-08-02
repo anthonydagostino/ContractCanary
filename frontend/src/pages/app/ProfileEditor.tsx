@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '../../components/PageHeader'
 import { Alert, PageLoader, Spinner } from '../../components/ui'
 import { ChipMultiSelect, TagInput, Typeahead } from '../../components/Typeahead'
@@ -21,12 +21,16 @@ export function ProfileEditor() {
   const { id } = useParams()
   const editing = !!id
   const navigate = useNavigate()
+  const location = useLocation()
   const { me } = useAuth()
   const { data: existing, isLoading } = useProfile(id)
   const { data: noticeTypes } = useNoticeTypes()
   const save = useSaveProfile()
 
-  const [form, setForm] = useState<ProfileInput>(empty)
+  // A new profile can arrive pre-filled from an opportunity ("Alert me about
+  // opportunities like this"). Editing an existing profile ignores any prefill.
+  const prefill = (location.state as { prefill?: Partial<ProfileInput> } | null)?.prefill
+  const [form, setForm] = useState<ProfileInput>(() => (prefill ? { ...empty, ...prefill } : empty))
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -57,6 +61,13 @@ export function ProfileEditor() {
 
       <form onSubmit={submit} className="space-y-6">
         {error && <Alert>{error}</Alert>}
+
+        {prefill && !editing && (
+          <div className="card border-canary-200 bg-canary-50/60 p-4 text-sm text-ink-800">
+            Pre-filled from an opportunity. Adjust the filters below and save to start getting daily
+            alerts for opportunities like it.
+          </div>
+        )}
 
         <div className="card p-6">
           <label className="label" htmlFor="name">Profile name</label>

@@ -48,6 +48,7 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | Pipeline tracking on saved opportunities | ✅ Built & on | — |
 | First-run onboarding nudge (create your first alert) | ✅ Built & on | — |
 | "More opportunities like this" on each opportunity | ✅ Built & on | — |
+| One-click "alert me about opportunities like this" | ✅ Built & on | — |
 | Amendment & deadline-change alerts (in-app + in the digest) | ✅ Built & on | — |
 | Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
@@ -60,6 +61,12 @@ per-user in-app notification preferences once there's more to tune.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- One-click "alert me about opportunities like this": on any opportunity, a button
+  spins up a new match profile pre-filled from that opportunity (its NAICS, or PSC
+  if it has no NAICS) — the user just tweaks and saves. This turns a browsing moment
+  into the single most valuable action a new user can take (creating an alert
+  profile), which is what puts them on the daily digest and change-alerts. It's the
+  fastest path from "just looking" to "getting value every morning."
 - "More opportunities like this": every opportunity page now shows a short list of
   other *currently-open* opportunities in the same NAICS or from the same agency,
   ranked best-match-first. It answers the single biggest question a buyer has —

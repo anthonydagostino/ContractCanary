@@ -18,6 +18,18 @@ export function OpportunityDetail() {
 
   const dl = deadlineLabel(n.responseDeadline)
 
+  // One-click "alert me about opportunities like this" — pre-fill a new match
+  // profile anchored on this notice's NAICS (or PSC if it has no NAICS). If it
+  // has neither, we can't seed a useful filter, so the button is hidden.
+  const anchorNaics = n.naicsCode ? [n.naicsCode] : []
+  const anchorPsc = !n.naicsCode && n.pscCode ? [n.pscCode] : []
+  const canAlert = anchorNaics.length > 0 || anchorPsc.length > 0
+  const alertPrefill = {
+    name: `Like: ${n.title.length > 48 ? n.title.slice(0, 48).trimEnd() + '…' : n.title}`,
+    naics: anchorNaics,
+    psc: anchorPsc,
+  }
+
   function save() {
     toggle.mutate({ noticeId: n!.noticeId, save: !n!.isSaved, note: note || n!.savedNote })
     setNoteOpen(false)
@@ -88,6 +100,11 @@ export function OpportunityDetail() {
         <div className="mt-6 flex flex-wrap gap-2">
           {n.uiLink && <a href={n.uiLink} target="_blank" rel="noreferrer" className="btn-primary">View on SAM.gov ↗</a>}
           {!n.isSaved && <button className="btn-secondary" onClick={() => setNoteOpen(true)}>Save opportunity</button>}
+          {canAlert && (
+            <Link to="/app/profiles/new" state={{ prefill: alertPrefill }} className="btn-secondary">
+              Alert me about opportunities like this
+            </Link>
+          )}
         </div>
       </div>
 
