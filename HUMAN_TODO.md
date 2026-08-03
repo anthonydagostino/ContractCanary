@@ -56,10 +56,37 @@ automatic backups (~$15/mo, see the backups item below).
    ADMIN_EMAILS=your-email@wherever.com     # the account you registered in the app
    BRANDING_POSTAL_ADDRESS=your mailing address, city, ST zip
    ```
-   Then: `cd /opt/ContractCanary && git pull && docker compose -f docker-compose.server.yml up -d --build`
-   (After this one, future redeploys are just `cd /opt/ContractCanary && ./deploy.sh`.)
-   This also auto-locks the old demo admin account (Part 11) — watch the api logs for
-   the `SECURITY: locked seeded default account` line.
+   Then either run `cd /opt/ContractCanary && git pull && docker compose -f docker-compose.server.yml up -d --build`
+   — or better, do the **auto-deploy setup below first** and let the pipeline deploy for you.
+   This redeploy also auto-locks the old demo admin account (Part 11) — watch the api
+   logs for the `SECURITY: locked seeded default account` line.
+
+   **⚙️ Auto-deploy (CI/CD) — one-time setup, ~5 minutes, then you never redeploy by hand again.**
+   A GitHub Actions pipeline now runs the full test suite + builds on every push, and
+   when everything is green it deploys to your droplet automatically. It just needs
+   permission to reach your server once:
+
+   a. In the droplet console (same place you edit `.env`), create a deploy key:
+      ```
+      ssh-keygen -t ed25519 -f /root/deploy_key -N "" -C "github-deploy"
+      cat /root/deploy_key.pub >> /root/.ssh/authorized_keys
+      cat /root/deploy_key
+      ```
+      Copy the entire output of that last command (from `-----BEGIN` to `END...-----`),
+      then delete the files: `rm /root/deploy_key /root/deploy_key.pub`
+   b. On GitHub: your repo → **Settings → Secrets and variables → Actions → New
+      repository secret**. Create three secrets:
+      - `DEPLOY_HOST` = `157.230.209.165`
+      - `DEPLOY_USER` = `root`
+      - `DEPLOY_SSH_KEY` = the private key you copied in (a)
+      (Treat that key like a password — it's root access to your server. GitHub
+      stores secrets encrypted and never shows them again.)
+   c. Trigger it: GitHub → **Actions** tab → **Test & Deploy** → **Run workflow**.
+      Watch it go green: backend tests → frontend build → deploy.
+
+   From then on, **every push deploys itself** — and only if all ~200 tests pass, so
+   a red test suite can never reach your live site. Until the secrets exist, the
+   pipeline still runs tests on every push and just skips the deploy step with a note.
 2. **Postmark — when the approval email arrives:** set `POSTMARK_SERVER_TOKEN=...`
    and `EMAIL_PROVIDER=Postmark` in `.env`, put the **digest on a "Broadcast" message
    stream** (verification/receipts on Transactional), redeploy, and send yourself a
