@@ -57,6 +57,7 @@ automatic backups (~$15/mo, see the backups item below).
    BRANDING_POSTAL_ADDRESS=your mailing address, city, ST zip
    ```
    Then: `cd /opt/ContractCanary && git pull && docker compose -f docker-compose.server.yml up -d --build`
+   (After this one, future redeploys are just `cd /opt/ContractCanary && ./deploy.sh`.)
    This also auto-locks the old demo admin account (Part 11) — watch the api logs for
    the `SECURITY: locked seeded default account` line.
 2. **Postmark — when the approval email arrives:** set `POSTMARK_SERVER_TOKEN=...`
