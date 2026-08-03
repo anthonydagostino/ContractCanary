@@ -25,9 +25,61 @@ job is literally: create an account → copy a value → paste it into one file 
   wording will match.
 
 **Rough time & cost:** ~2–4 hours the first time. Ongoing cost to run it: a small
-server (~$6–12/mo), AWS RDS database (~$15/mo or free tier for 12 months), domain
+server (~$6–12/mo; the database currently runs on the same box for free), domain
 (~$10/yr), Stripe (2.9% + 30¢ per charge, nothing until you charge), Postmark (free
-up to 100 emails/mo, then ~$15/mo). SAM.gov and Cloudflare DNS are free.
+up to 100 emails/mo, then ~$15/mo). SAM.gov and Cloudflare DNS/email-forwarding are
+free. Optional but recommended once you have paying users: a managed Postgres with
+automatic backups (~$15/mo, see the backups item below).
+
+---
+
+## 📍 Where you are right now (updated Aug 3, 2026)
+
+**Already knocked out — no action needed:**
+- ✅ Domain + Cloudflare DNS, live site with HTTPS at contract-canary.com
+- ✅ Server deployed (DigitalOcean droplet, Docker Compose stack)
+- ✅ SAM.gov API key — **real opportunity data is live** (`INGEST_SOURCE=Sam`)
+- ✅ Strong JWT signing key set (rotated after the earlier screenshot leak)
+- ✅ **Support email works**: Cloudflare Email Routing forwards
+  `support@contract-canary.com` to your Gmail (the address used in the Terms,
+  Privacy Policy, site footer, and email templates)
+- ✅ Postmark server created, sending DNS (DKIM/Return-Path) verified, server token
+  in hand — *only the account approval is still pending on Postmark's side*
+
+**Still to do, in the order I'd do them:**
+
+1. **Redeploy the server to pick up everything new.** A lot has shipped since your
+   last deploy (alerts, deadline reminders, security hardening, legal docs, data
+   rights, unsubscribe). While you're in the `.env`, add these lines, then redeploy:
+   ```
+   SEED_DEMO=false
+   ADMIN_EMAILS=your-email@wherever.com     # the account you registered in the app
+   BRANDING_POSTAL_ADDRESS=your mailing address, city, ST zip
+   ```
+   Then: `cd /opt/ContractCanary && git pull && docker compose -f docker-compose.server.yml up -d --build`
+   This also auto-locks the old demo admin account (Part 11) — watch the api logs for
+   the `SECURITY: locked seeded default account` line.
+2. **Postmark — when the approval email arrives:** set `POSTMARK_SERVER_TOKEN=...`
+   and `EMAIL_PROVIDER=Postmark` in `.env`, put the **digest on a "Broadcast" message
+   stream** (verification/receipts on Transactional), redeploy, and send yourself a
+   test digest. (Part 5 + item 4 in the compliance section below.)
+3. **Stripe** (Part 4): create products/prices, set the keys + webhook secret in
+   `.env`, and in the Stripe Dashboard set the **statement descriptor**
+   (`CONTRACTCANARY`), turn on **email receipts**, and enable **cancel subscription**
+   in the Customer Portal.
+4. **Company/legal details:** in `frontend/src/config/branding.ts` set
+   `companyLegalName` and `governingLawState` (tell engineering the state and it's a
+   one-line change + rebuild if you'd rather not touch code).
+5. **Lawyer pass** over `/terms` and `/privacy`, then remove the "pending legal
+   review" banner (Part 12).
+6. **Backups + monitoring** (items 6–7 in the compliance section): nightly database
+   backup with one *tested* restore, plus Sentry + a free uptime monitor on `/health`.
+   Backups are the one existential item on this list — don't launch marketing pushes
+   without them.
+
+*Optional while you wait on Postmark/Stripe:* add a `privacy@` forward in Cloudflare
+Email Routing (30 seconds, same screen as support@), and turn on AI summaries
+(`AI_ENABLED=true` + an Anthropic key — see the AI part below).
 
 ---
 
@@ -59,7 +111,8 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | Government/accuracy disclaimers + honest marketing copy | ✅ Built & on | — |
 | CAN-SPAM one-click unsubscribe + postal address in digest | ✅ Built & on | Set `BRANDING_POSTAL_ADDRESS` before real email |
 | Production resilience (DB retry, pool sizing, graceful shutdown) | ✅ Built & on | — |
-| Real email (verification + digests) | ⏳ Your task | Postmark approval + `POSTMARK_SERVER_TOKEN` |
+| Support email (support@contract-canary.com) | ✅ Done by you | Cloudflare Email Routing → your Gmail |
+| Real email (verification + digests) | ⏳ Waiting on Postmark approval | Token in hand; on approval set `POSTMARK_SERVER_TOKEN` + `EMAIL_PROVIDER=Postmark` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
 | Your own admin account + remove the old demo admin | ⏳ Your task (now mostly automatic) | Set `ADMIN_EMAILS` + `SEED_DEMO=false`, redeploy (Part 11) |
 | Legal review of ToS/Privacy | ⏳ Your task | 30-min lawyer/paralegal pass |
