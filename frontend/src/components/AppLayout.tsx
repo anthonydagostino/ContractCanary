@@ -37,7 +37,7 @@ export function AppLayout() {
       {/* Topbar (mobile) */}
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2"><Logo className="h-6 w-6" /><span className="font-bold">{branding.productName}</span></div>
-        <button className="btn-ghost" onClick={() => setOpen((o) => !o)} aria-label="Menu">
+        <button type="button" className="btn-ghost" onClick={() => setOpen((o) => !o)} aria-label="Menu">
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
       </div>
@@ -106,7 +106,7 @@ export function AppLayout() {
               {trialDaysLeft !== null && trialDaysLeft >= 0 && (
                 <p className="mt-2 text-xs text-amber-700">Trial: {trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'} left</p>
               )}
-              <button onClick={doLogout} className="mt-3 w-full text-left text-xs text-slate-500 hover:text-slate-700">Sign out</button>
+              <button type="button" onClick={doLogout} className="mt-3 w-full text-left text-xs text-slate-500 hover:text-slate-700">Sign out</button>
             </div>
           </div>
         </aside>

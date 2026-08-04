@@ -20,7 +20,7 @@ export function LegalPage({ doc }: { doc: 'terms' | 'privacy' }) {
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
           {isTerms ? 'Terms of Service' : 'Privacy Policy'}
         </h1>
-        <p className="mt-2 text-sm text-slate-500">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="mt-2 text-sm text-slate-500">Last updated: {LAST_UPDATED}</p>
 
         <div className="prose prose-slate mt-8 max-w-none text-sm leading-6 text-slate-700">
           {isTerms ? <TermsBody /> : <PrivacyBody />}
@@ -29,6 +29,9 @@ export function LegalPage({ doc }: { doc: 'terms' | 'privacy' }) {
     </MarketingLayout>
   )
 }
+
+// Bump this date only when the Terms or Privacy Policy text actually changes.
+const LAST_UPDATED = 'August 4, 2026'
 
 const P = branding.productName
 const Support = branding.supportEmail

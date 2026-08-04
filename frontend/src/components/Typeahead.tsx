@@ -127,20 +127,22 @@ export function TagInput({ label, placeholder, values, onChange, help, transform
   }
   return (
     <div>
-      <label className="label">{label}</label>
+      <label className="label" htmlFor={id}>{label}</label>
       {values.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {values.map((v) => (
             <span key={v} className="badge bg-slate-100 text-slate-700">
               {v}
-              <button onClick={() => onChange(values.filter((x) => x !== v))} className="ml-1 text-slate-500 hover:text-slate-700" aria-label={`Remove ${v}`}>×</button>
+              <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} className="ml-1 text-slate-500 hover:text-slate-700" aria-label={`Remove ${v}`}>×</button>
             </span>
           ))}
         </div>
       )}
       <input
+        id={id}
         className="input"
         placeholder={placeholder}
+        aria-describedby={help ? `${id}-help` : undefined}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {

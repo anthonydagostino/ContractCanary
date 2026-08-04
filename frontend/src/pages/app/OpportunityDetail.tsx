@@ -62,8 +62,8 @@ export function OpportunityDetail() {
             <label className="label">Add a note (optional)</label>
             <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Good fit — draft response by Friday" />
             <div className="mt-2 flex gap-2">
-              <button className="btn-primary" onClick={save}>Save opportunity</button>
-              <button className="btn-ghost" onClick={() => setNoteOpen(false)}>Cancel</button>
+              <button type="button" className="btn-primary" onClick={save}>Save opportunity</button>
+              <button type="button" className="btn-ghost" onClick={() => setNoteOpen(false)}>Cancel</button>
             </div>
           </div>
         )}
@@ -99,7 +99,7 @@ export function OpportunityDetail() {
 
         <div className="mt-6 flex flex-wrap gap-2">
           {n.uiLink && <a href={n.uiLink} target="_blank" rel="noreferrer" className="btn-primary">View on SAM.gov ↗</a>}
-          {!n.isSaved && <button className="btn-secondary" onClick={() => setNoteOpen(true)}>Save opportunity</button>}
+          {!n.isSaved && <button type="button" className="btn-secondary" onClick={() => setNoteOpen(true)}>Save opportunity</button>}
           {canAlert && (
             <Link to="/app/profiles/new" state={{ prefill: alertPrefill }} className="btn-secondary">
               Alert me about opportunities like this

@@ -21,7 +21,7 @@ export function Profiles() {
           atLimit ? (
             <Link to="/app/settings" className="btn-secondary">Upgrade to add more</Link>
           ) : (
-            <button className="btn-primary" onClick={() => navigate('/app/profiles/new')}>New profile</button>
+            <button type="button" className="btn-primary" onClick={() => navigate('/app/profiles/new')}>New profile</button>
           )
         }
       />
@@ -38,7 +38,7 @@ export function Profiles() {
         <EmptyState
           title="No match profiles yet"
           hint="Create your first profile with your NAICS codes, keywords, and target agencies to start getting matches."
-          action={<button className="btn-primary" onClick={() => navigate('/app/profiles/new')}>Create a profile</button>}
+          action={<button type="button" className="btn-primary" onClick={() => navigate('/app/profiles/new')}>Create a profile</button>}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -63,6 +63,7 @@ export function Profiles() {
                 <Link to={`/app/profiles/${p.id}`} className="btn-secondary">Edit</Link>
                 <Link to={`/app?profileId=${p.id}`} className="btn-ghost">View matches</Link>
                 <button
+                  type="button"
                   className="btn-ghost ml-auto text-red-600 hover:bg-red-50"
                   onClick={() => { if (confirm(`Delete “${p.name}”? This removes its matches.`)) del.mutate(p.id) }}
                 >

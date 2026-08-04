@@ -64,6 +64,7 @@ export function Saved() {
 function FilterChip({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={
         'rounded-full border px-3 py-1 text-xs font-medium transition ' +
@@ -113,6 +114,7 @@ function PipelineCard({ item }: { item: SavedNoticeItem }) {
         </label>
         <Link to={`/app/opportunities/${item.noticeId}`} className="text-sm text-slate-500 hover:text-slate-700">View</Link>
         <button
+          type="button"
           className="text-sm text-slate-500 hover:text-red-600"
           onClick={() => toggle.mutate({ noticeId: item.noticeId, save: false })}
         >

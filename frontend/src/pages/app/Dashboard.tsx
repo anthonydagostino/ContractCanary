@@ -48,7 +48,7 @@ export function Dashboard() {
         title="Opportunities"
         subtitle="Search and filter federal contract opportunities. Star the ones you're tracking."
         action={me?.limits.canExportCsv ? (
-          <button className="btn-secondary" onClick={downloadCsv}>Export CSV</button>
+          <button type="button" className="btn-secondary" onClick={downloadCsv}>Export CSV</button>
         ) : (
           <span className="text-xs text-slate-500">CSV export is a Pro feature</span>
         )}
@@ -138,6 +138,7 @@ export function Dashboard() {
               return (
                 <button
                   key={t.value}
+                  type="button"
                   onClick={() => toggleType(t.value)}
                   className={'rounded-full border px-3 py-1 text-xs transition ' + (active ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400')}
                 >

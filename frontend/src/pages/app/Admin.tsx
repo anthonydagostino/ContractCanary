@@ -42,7 +42,7 @@ export function Admin() {
       <PageHeader
         title="Admin"
         subtitle="Operational metrics for the platform."
-        action={<button className="btn-secondary" onClick={runIngest} disabled={busy}>{busy ? <Spinner className="h-4 w-4" /> : 'Run ingest now'}</button>}
+        action={<button type="button" className="btn-secondary" onClick={runIngest} disabled={busy}>{busy ? <Spinner className="h-4 w-4" /> : 'Run ingest now'}</button>}
       />
 
       {msg && <div className="mb-4"><Alert tone="green">{msg}</Alert></div>}

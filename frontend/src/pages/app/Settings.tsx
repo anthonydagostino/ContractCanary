@@ -133,16 +133,16 @@ export function Settings() {
 
         <div className="flex flex-wrap gap-3">
           {me.plan !== 'Starter' && me.plan !== 'Pro' && (
-            <button className="btn-secondary" onClick={() => startCheckout('Starter')} disabled={checkout.isPending || !renewalConsent}>
+            <button type="button" className="btn-secondary" onClick={() => startCheckout('Starter')} disabled={checkout.isPending || !renewalConsent}>
               Subscribe to Starter — $29/mo, auto-renews
             </button>
           )}
           {me.plan !== 'Pro' && (
-            <button className="btn-primary" onClick={() => startCheckout('Pro')} disabled={checkout.isPending || !renewalConsent}>
+            <button type="button" className="btn-primary" onClick={() => startCheckout('Pro')} disabled={checkout.isPending || !renewalConsent}>
               {checkout.isPending ? <Spinner className="h-4 w-4" /> : 'Subscribe to Pro — $79/mo, auto-renews'}
             </button>
           )}
-          <button className="btn-ghost" onClick={openPortal} disabled={portal.isPending}>Manage billing</button>
+          <button type="button" className="btn-ghost" onClick={openPortal} disabled={portal.isPending}>Manage billing</button>
         </div>
         <p className="text-xs text-slate-500">Billing is handled securely by Stripe. Cancel anytime from Manage billing.</p>
       </div>
@@ -194,7 +194,7 @@ function DataAndAccountCard() {
     <div className="card mt-6 space-y-4 p-6">
       <p className="text-sm font-semibold text-slate-900">Your data</p>
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-secondary" onClick={download} disabled={exportData.isPending}>
+        <button type="button" className="btn-secondary" onClick={download} disabled={exportData.isPending}>
           {exportData.isPending ? <Spinner className="h-4 w-4" /> : 'Download my data'}
         </button>
         <p className="text-xs text-slate-500">A JSON file of your account, match profiles, saved opportunities, and alerts.</p>
@@ -208,7 +208,7 @@ function DataAndAccountCard() {
       </p>
       {error && <Alert>{error}</Alert>}
       {!confirmOpen ? (
-        <button className="btn-secondary border-red-200 text-red-700 hover:bg-red-50" onClick={() => setConfirmOpen(true)}>
+        <button type="button" className="btn-secondary border-red-200 text-red-700 hover:bg-red-50" onClick={() => setConfirmOpen(true)}>
           Delete my account…
         </button>
       ) : (

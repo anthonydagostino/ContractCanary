@@ -20,7 +20,7 @@ export function MarketingLayout({ children }: { children: ReactNode }) {
           <nav className="flex items-center gap-1.5 sm:gap-2">
             <Link to="/pricing" className="btn-ghost hidden sm:inline-flex">Pricing</Link>
             {me ? (
-              <button className="btn-primary" onClick={() => navigate('/app')}>Go to dashboard</button>
+              <button type="button" className="btn-primary" onClick={() => navigate('/app')}>Go to dashboard</button>
             ) : (
               <>
                 <Link to="/login" className="btn-ghost">Sign in</Link>
