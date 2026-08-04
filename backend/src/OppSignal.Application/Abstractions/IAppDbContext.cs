@@ -26,4 +26,11 @@ public interface IAppDbContext
     DbSet<SetAsideRef> SetAsides { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Detach every tracked entity. Recovery path after a failed SaveChanges:
+    /// without it the poisoned entities are re-saved (and re-throw) on the next
+    /// SaveChangesAsync from the same scope.
+    /// </summary>
+    void ClearChangeTracker();
 }

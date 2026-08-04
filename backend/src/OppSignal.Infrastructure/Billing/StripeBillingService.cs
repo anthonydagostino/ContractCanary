@@ -48,16 +48,27 @@ public sealed class StripeBillingService : IBillingService
         var sub = await GetOrCreateSubscriptionRowAsync(userId, ct);
         var customerId = await EnsureCustomerAsync(sub, user.Email!, user.FullName, ct);
 
+        // Trials are granted once, at registration. A checkout during the active
+        // trial carries the REMAINING trial days into Stripe; after the trial has
+        // been consumed (expired, or a lapsed subscriber returning) checkout must
+        // not mint another free trial, and payment details are then required.
+        // Stripe Checkout requires trial_end ≥ 48h out, so a nearly-done trial
+        // simply converts to a paid subscription now.
+        var now = _clock.UtcNow;
+        var activeTrialEnd = sub.TrialEndsAt is { } te && te > now.AddHours(49)
+            ? DateTime.SpecifyKind(te, DateTimeKind.Utc)
+            : (DateTime?)null;
+
         var options = new SessionCreateOptions
         {
             Mode = "subscription",
             Customer = customerId,
             ClientReferenceId = userId.ToString(),
             LineItems = new List<SessionLineItemOptions> { new() { Price = priceId, Quantity = 1 } },
-            PaymentMethodCollection = "if_required", // no card required for the trial
+            PaymentMethodCollection = activeTrialEnd is null ? "always" : "if_required",
             SubscriptionData = new SessionSubscriptionDataOptions
             {
-                TrialPeriodDays = _options.TrialDays,
+                TrialEnd = activeTrialEnd,
                 Metadata = new Dictionary<string, string> { ["userId"] = userId.ToString(), ["plan"] = plan.ToString() },
             },
             SuccessUrl = _options.SuccessUrl,
@@ -118,8 +129,10 @@ public sealed class StripeBillingService : IBillingService
             case "checkout.session.completed":
                 if (stripeEvent.Data.Object is Session session && !string.IsNullOrEmpty(session.SubscriptionId))
                 {
+                    // Fetched fresh from the API, so the snapshot reflects "now",
+                    // not the event's creation time.
                     var sub = await new SubscriptionService(_client).GetAsync(session.SubscriptionId, cancellationToken: ct);
-                    await SyncAsync(sub, session.ClientReferenceId, ct);
+                    await SyncAsync(sub, session.ClientReferenceId, _clock.UtcNow, ct);
                 }
                 break;
 
@@ -127,7 +140,7 @@ public sealed class StripeBillingService : IBillingService
             case "customer.subscription.updated":
             case "customer.subscription.deleted":
                 if (stripeEvent.Data.Object is Subscription s)
-                    await SyncAsync(s, null, ct);
+                    await SyncAsync(s, null, stripeEvent.Created, ct);
                 break;
 
             default:
@@ -200,7 +213,7 @@ public sealed class StripeBillingService : IBillingService
         return customer.Id;
     }
 
-    private async Task SyncAsync(Subscription stripeSub, string? clientReferenceId, CancellationToken ct)
+    private async Task SyncAsync(Subscription stripeSub, string? clientReferenceId, DateTime eventCreatedUtc, CancellationToken ct)
     {
         var userIdMeta = stripeSub.Metadata?.GetValueOrDefault("userId") ?? clientReferenceId;
         var priceId = stripeSub.Items?.Data?.FirstOrDefault()?.Price?.Id;
@@ -212,6 +225,19 @@ public sealed class StripeBillingService : IBillingService
             return;
         }
 
+        // Stripe retries and does not guarantee delivery order: never let an
+        // older snapshot overwrite newer state (e.g. a stale `updated(active)`
+        // arriving after `deleted` would resurrect a canceled subscription).
+        var eventAt = DateTime.SpecifyKind(eventCreatedUtc, DateTimeKind.Utc);
+        if (local.LastStripeEventAt is { } lastAt && eventAt < lastAt)
+        {
+            _log.LogInformation(
+                "Ignoring stale Stripe event for user {User} ({EventAt:o} < {LastAt:o})",
+                local.UserId, eventAt, lastAt);
+            return;
+        }
+
+        local.LastStripeEventAt = eventAt;
         local.StripeCustomerId = stripeSub.CustomerId;
         local.StripeSubscriptionId = stripeSub.Id;
         local.StripePriceId = priceId;

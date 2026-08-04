@@ -27,16 +27,16 @@ public static class NoticeNormalizer
         return new Notice
         {
             NoticeId = dto.NoticeId,
-            Title = string.IsNullOrWhiteSpace(dto.Title) ? "(untitled notice)" : dto.Title!.Trim(),
-            SolicitationNumber = Trim(dto.SolicitationNumber),
+            Title = string.IsNullOrWhiteSpace(dto.Title) ? "(untitled notice)" : Cap(dto.Title, 1024)!,
+            SolicitationNumber = Cap(dto.SolicitationNumber, 256),
             Type = SamMappings.ParseNoticeType(dto.Type ?? dto.BaseType),
             BaseType = Trim(dto.BaseType),
-            AgencyPath = agencyPath,
-            DepartmentName = dept,
-            SubTierName = subTier,
-            OfficeName = office,
-            NaicsCode = Trim(dto.NaicsCode),
-            PscCode = Trim(dto.ClassificationCode),
+            AgencyPath = Cap(agencyPath, 1024),
+            DepartmentName = Cap(dept, 512),
+            SubTierName = Cap(subTier, 512),
+            OfficeName = Cap(office, 512),
+            NaicsCode = Cap(dto.NaicsCode, 12),
+            PscCode = Cap(dto.ClassificationCode, 12),
             SetAside = SamMappings.ParseSetAside(dto.TypeOfSetAside),
             SetAsideDescription = Trim(dto.TypeOfSetAsideDescription),
             PostedDate = DateTime.SpecifyKind(postedDate, DateTimeKind.Utc),
@@ -45,7 +45,7 @@ public static class NoticeNormalizer
             PopState = StateCode(pop?.State?.Code),
             PopCity = Trim(pop?.City?.Name),
             PopZip = Trim(pop?.Zip),
-            PopCountry = Trim(pop?.Country?.Code),
+            PopCountry = Cap(pop?.Country?.Code, 8),
             UiLink = Trim(dto.UiLink),
             DescriptionLink = Trim(dto.Description),
             Description = Trim(dto.DescriptionText),
@@ -72,6 +72,16 @@ public static class NoticeNormalizer
     }
 
     private static string? Trim(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    // Every column-bounded string must be capped to its width: SAM data
+    // occasionally exceeds the documented sizes, and one oversize value would
+    // otherwise fail the entire ingest batch on every run for the whole
+    // rolling window (a multi-day outage from a single bad record).
+    private static string? Cap(string? s, int max)
+    {
+        var t = Trim(s);
+        return t is null || t.Length <= max ? t : t[..max];
+    }
 
     // Place-of-performance state: usually a 2-letter US code, but SAM data can carry
     // longer international province codes or malformed values. Store what's there,

@@ -15,7 +15,7 @@ public class CanSpamUnsubscribeTests : ApiTestBase
     public CanSpamUnsubscribeTests(OppSignalWebAppFactory factory) : base(factory) { }
 
     [Fact]
-    public async Task A_valid_unsubscribe_link_opts_the_user_out_a_forged_one_does_nothing()
+    public async Task Opening_the_unsubscribe_link_does_not_opt_out_the_confirming_POST_does()
     {
         var (_, _, userId) = await RegisterAndLoginAsync($"unsub_{Guid.NewGuid():N}@test.dev");
 
@@ -23,13 +23,27 @@ public class CanSpamUnsubscribeTests : ApiTestBase
         using (var scope = Factory.Services.CreateScope())
             token = scope.ServiceProvider.GetRequiredService<UnsubscribeTokenService>().Create(userId);
 
-        // Forged token: the page still loads (no info leak) but nothing changes.
-        (await NewClient().GetAsync($"/api/unsubscribe?u={userId}&t=forged")).EnsureSuccessStatusCode();
+        // Regression: corporate mail scanners (Outlook SafeLinks, Mimecast)
+        // prefetch every link in delivered mail with the REAL token. The GET
+        // must only render the confirmation form — never change state.
+        var page = await NewClient().GetAsync($"/api/unsubscribe?u={userId}&t={Uri.EscapeDataString(token)}");
+        page.EnsureSuccessStatusCode();
+        (await page.Content.ReadAsStringAsync()).Should().Contain("form", "the GET should render a confirm form");
+        (await OptedOutAsync(userId)).Should().BeNull("a link prefetch must not unsubscribe the user");
+
+        // Forged token on the POST: same page (no info leak), no change.
+        (await PostUnsubscribeAsync(userId.ToString(), "forged")).EnsureSuccessStatusCode();
         (await OptedOutAsync(userId)).Should().BeNull();
 
-        // Valid token: opts them out.
-        (await NewClient().GetAsync($"/api/unsubscribe?u={userId}&t={Uri.EscapeDataString(token)}")).EnsureSuccessStatusCode();
+        // Valid POST (the user clicking the confirm button): opts them out.
+        (await PostUnsubscribeAsync(userId.ToString(), token)).EnsureSuccessStatusCode();
         (await OptedOutAsync(userId)).Should().NotBeNull();
+    }
+
+    private async Task<HttpResponseMessage> PostUnsubscribeAsync(string u, string t)
+    {
+        var form = new FormUrlEncodedContent(new Dictionary<string, string> { ["u"] = u, ["t"] = t });
+        return await NewClient().PostAsync("/api/unsubscribe", form);
     }
 
     [Fact]

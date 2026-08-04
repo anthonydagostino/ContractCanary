@@ -49,8 +49,11 @@ public sealed class NoticesController : ControllerBase
             throw new PlanLimitException("CSV export is a Pro feature. Upgrade to Pro to export search results.");
 
         var csv = await _notices.ExportCsvAsync(userId, query, ct);
-        var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
-        return File(bytes, "text/csv", $"oppsignal-export-{DateTime.UtcNow:yyyyMMdd}.csv");
+        // UTF-8 BOM so Excel renders accented agency names instead of mojibake.
+        var bytes = System.Text.Encoding.UTF8.GetPreamble()
+            .Concat(System.Text.Encoding.UTF8.GetBytes(csv))
+            .ToArray();
+        return File(bytes, "text/csv", $"contractcanary-export-{DateTime.UtcNow:yyyyMMdd}.csv");
     }
 
     [HttpGet("saved")]

@@ -34,6 +34,8 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     // Identity-adjacent
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public void ClearChangeTracker() => ChangeTracker.Clear();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

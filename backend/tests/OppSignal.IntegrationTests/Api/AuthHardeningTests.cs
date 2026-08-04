@@ -1,7 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using OppSignal.Api.Infrastructure;
+using OppSignal.Infrastructure.Auth;
+using OppSignal.Infrastructure.Persistence;
 using OppSignal.IntegrationTests.Support;
 using Xunit;
 
@@ -75,6 +79,40 @@ public class AuthHardeningTests : ApiTestBase
         // ...so the freshly-issued t2 is now invalid too.
         var afterReuse = await client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = t2!.RefreshToken });
         afterReuse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task An_expired_refresh_token_is_rejected_without_revoking_other_sessions()
+    {
+        // Regression: mere expiry was treated like theft, so a dormant laptop
+        // waking up (or anyone replaying a long-expired token) logged the user
+        // out of every active device.
+        var email = $"expiry_{Guid.NewGuid():N}@test.dev";
+        await RegisterAndLoginAsync(email);
+        var client = NewClient();
+
+        var loginA = await client.PostAsJsonAsync("/api/auth/login", new { email, password = "Password123!" });
+        var deviceA = await loginA.Content.ReadFromJsonAsync<TokenResponse>();
+        var loginB = await client.PostAsJsonAsync("/api/auth/login", new { email, password = "Password123!" });
+        var deviceB = await loginB.Content.ReadFromJsonAsync<TokenResponse>();
+
+        // Device A goes dormant past the refresh-token lifetime.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var hash = JwtTokenService.Hash(deviceA!.RefreshToken);
+            var token = await db.RefreshTokens.FirstAsync(t => t.TokenHash == hash);
+            token.ExpiresAt = DateTime.UtcNow.AddDays(-1);
+            await db.SaveChangesAsync();
+        }
+
+        // The expired token is rejected...
+        var expired = await client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = deviceA!.RefreshToken });
+        expired.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // ...but device B's active session survives — expiry is not reuse evidence.
+        var refreshB = await client.PostAsJsonAsync("/api/auth/refresh", new { refreshToken = deviceB!.RefreshToken });
+        refreshB.EnsureSuccessStatusCode();
     }
 
     // ---- Non-enumerating registration -----------------------------------------

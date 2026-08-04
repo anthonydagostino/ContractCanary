@@ -79,7 +79,12 @@ public sealed class MatchingService : IMatchingService
     /// Existing matches for the profile are cleared first (filters may have
     /// changed). New matches are pre-marked notified so they don't flood a digest.
     /// </summary>
-    public async Task<int> BackfillProfileAsync(Guid profileId, Guid userId, CancellationToken ct = default)
+    public Task<int> BackfillProfileAsync(Guid profileId, Guid userId, CancellationToken ct = default)
+        => BackfillProfileAsync(profileId, userId, batchSize: 500, ct);
+
+    // batchSize is overridable so tests can exercise batch-boundary behavior
+    // without seeding hundreds of notices.
+    internal async Task<int> BackfillProfileAsync(Guid profileId, Guid userId, int batchSize, CancellationToken ct)
     {
         // Scope by userId: a caller can never rebuild/delete matches for a profile it doesn't own.
         var profile = await _db.MatchProfiles.FirstOrDefaultAsync(p => p.Id == profileId && p.UserId == userId, ct);
@@ -91,20 +96,27 @@ public sealed class MatchingService : IMatchingService
         var now = _clock.UtcNow;
         var created = 0;
 
-        // Stream active notices in batches to bound memory at scale.
-        const int batchSize = 500;
+        // Stream active notices in batches to bound memory at scale. PostedDate
+        // is date-only and massively tied, so a unique tiebreak is required —
+        // without it successive Skip/Take pages can repeat or drop rows, and a
+        // repeated row would violate the (NoticeId, MatchProfileId) unique index.
+        var seenNoticeIds = new HashSet<string>(StringComparer.Ordinal);
         var offset = 0;
         while (true)
         {
             var batch = await _db.Notices
                 .Where(n => n.IsActive)
                 .OrderByDescending(n => n.PostedDate)
+                .ThenBy(n => n.NoticeId)
                 .Skip(offset).Take(batchSize)
                 .ToListAsync(ct);
             if (batch.Count == 0) break;
 
             foreach (var notice in batch)
             {
+                // Belt and braces: concurrent ingest can still shift offsets
+                // between pages, so never add the same notice twice in one run.
+                if (!seenNoticeIds.Add(notice.NoticeId)) continue;
                 var outcome = _engine.Evaluate(notice, profile);
                 if (!outcome.IsMatch) continue;
                 _db.NoticeMatches.Add(new NoticeMatch

@@ -136,7 +136,8 @@ public sealed class NoticeService : INoticeService
         var notices = await Sort(query, q).Take(CsvRowCap).ToListAsync(ct);
 
         var sb = new StringBuilder();
-        sb.AppendLine("NoticeId,Title,SolicitationNumber,Type,Agency,NAICS,PSC,SetAside,Posted,ResponseDeadline,State,City,Link");
+        // '\n' to match the data rows — AppendLine would emit the platform newline.
+        sb.Append("NoticeId,Title,SolicitationNumber,Type,Agency,NAICS,PSC,SetAside,Posted,ResponseDeadline,State,City,Link").Append('\n');
         foreach (var n in notices)
         {
             sb.Append(Csv(n.NoticeId)).Append(',')
@@ -208,8 +209,11 @@ public sealed class NoticeService : INoticeService
             var term = q.Agency.Trim().ToLower();
             query = query.Where(n => n.AgencyPath != null && n.AgencyPath.ToLower().Contains(term));
         }
-        if (q.PostedFrom is { } pf) query = query.Where(n => n.PostedDate >= pf);
-        if (q.PostedTo is { } pt) query = query.Where(n => n.PostedDate <= pt);
+        // Query-string dates bind with Kind=Unspecified; Npgsql refuses to write
+        // those against timestamptz, turning a plain ?postedFrom=2026-08-01 into
+        // a 500. The values name UTC calendar dates.
+        if (q.PostedFrom is { } pf) query = query.Where(n => n.PostedDate >= DateTime.SpecifyKind(pf, DateTimeKind.Utc));
+        if (q.PostedTo is { } pt) query = query.Where(n => n.PostedDate <= DateTime.SpecifyKind(pt, DateTimeKind.Utc));
 
         if (q.ProfileId is { } pid)
             query = query.Where(n => _db.NoticeMatches.Any(m => m.NoticeId == n.NoticeId && m.MatchProfileId == pid && m.UserId == userId));
@@ -227,9 +231,12 @@ public sealed class NoticeService : INoticeService
         var asc = string.Equals(q.Direction, "asc", StringComparison.OrdinalIgnoreCase);
         return q.Sort?.ToLowerInvariant() switch
         {
+            // Every sort needs a unique tiebreak (NoticeId): deadlines and posted
+            // dates are heavily tied, and unstable ordering makes Skip/Take
+            // pagination repeat some rows and drop others across pages.
             "deadline" => asc
-                ? query.OrderBy(n => n.ResponseDeadline == null).ThenBy(n => n.ResponseDeadline).ThenByDescending(n => n.PostedDate)
-                : query.OrderBy(n => n.ResponseDeadline == null).ThenByDescending(n => n.ResponseDeadline).ThenByDescending(n => n.PostedDate),
+                ? query.OrderBy(n => n.ResponseDeadline == null).ThenBy(n => n.ResponseDeadline).ThenByDescending(n => n.PostedDate).ThenBy(n => n.NoticeId)
+                : query.OrderBy(n => n.ResponseDeadline == null).ThenByDescending(n => n.ResponseDeadline).ThenByDescending(n => n.PostedDate).ThenBy(n => n.NoticeId),
             _ => asc
                 ? query.OrderBy(n => n.PostedDate).ThenBy(n => n.NoticeId)
                 : query.OrderByDescending(n => n.PostedDate).ThenBy(n => n.NoticeId),

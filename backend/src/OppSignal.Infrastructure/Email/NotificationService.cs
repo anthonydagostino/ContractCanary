@@ -100,7 +100,9 @@ public sealed class NotificationService : INotificationService
                     ? $"An opportunity you're tracking is closing soon — {model.DateLabel}"
                     : $"{model.ClosingSoonCount} opportunities you're tracking are closing soon — {model.DateLabel}");
 
-        await SendAndLogAsync(new EmailMessage
+        // Report the real send outcome: stamping matches as notified after a
+        // failed send would silently swallow those notifications forever.
+        return await SendAndLogAsync(new EmailMessage
         {
             ToAddress = model.ToEmail,
             ToName = model.ToName,
@@ -110,7 +112,6 @@ public sealed class NotificationService : INotificationService
             Kind = EmailKind.Digest,
             UserId = model.UserId,
         }, ct);
-        return true;
     }
 
     // ---- helpers ------------------------------------------------------------
@@ -154,7 +155,7 @@ public sealed class NotificationService : INotificationService
         }, ct);
     }
 
-    private async Task SendAndLogAsync(EmailMessage message, CancellationToken ct)
+    private async Task<bool> SendAndLogAsync(EmailMessage message, CancellationToken ct)
     {
         var result = await _sender.SendAsync(message, ct);
         _db.EmailLogs.Add(new EmailLog
@@ -173,6 +174,7 @@ public sealed class NotificationService : INotificationService
 
         if (!result.Success)
             _log.LogWarning("Email {Kind} to {To} failed: {Error}", message.Kind, message.ToAddress, result.Error);
+        return result.Success;
     }
 
     private static string BuildDigestText(DigestModel model)

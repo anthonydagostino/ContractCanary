@@ -33,18 +33,26 @@ automatic backups (~$15/mo, see the backups item below).
 
 ---
 
-## 📍 Where you are right now (updated Aug 3, 2026)
+## 📍 Where you are right now (updated Aug 4, 2026)
 
 **Already knocked out — no action needed:**
 - ✅ Domain + Cloudflare DNS, live site with HTTPS at contract-canary.com
 - ✅ Server deployed (DigitalOcean droplet, Docker Compose stack)
+- ✅ **Auto-deploy pipeline is live**: every push runs the full test suite
+  (219 backend + 38 frontend tests) and deploys to the droplet only when green
 - ✅ SAM.gov API key — **real opportunity data is live** (`INGEST_SOURCE=Sam`)
+- ✅ Admin account promoted (your email) — Admin page with metrics works
 - ✅ Strong JWT signing key set (rotated after the earlier screenshot leak)
 - ✅ **Support email works**: Cloudflare Email Routing forwards
   `support@contract-canary.com` to your Gmail (the address used in the Terms,
   Privacy Policy, site footer, and email templates)
 - ✅ Postmark server created, sending DNS (DKIM/Return-Path) verified, server token
   in hand — *only the account approval is still pending on Postmark's side*
+- ✅ **Full bug sweep (Aug 4)**: two review passes over the whole codebase found and
+  fixed 30+ real bugs — the biggest were digests marking notifications "sent" even
+  when the email failed, broad NAICS codes (like "54") silently never matching,
+  deadline labels off by a day, and posted dates showing one day early. All fixed
+  with regression tests; the next auto-deploy ships them.
 
 **Still to do, in the order I'd do them:**
 

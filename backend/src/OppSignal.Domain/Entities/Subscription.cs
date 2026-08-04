@@ -23,6 +23,14 @@ public class Subscription
     public DateTime? CurrentPeriodEndsAt { get; set; }
     public bool CancelAtPeriodEnd { get; set; }
 
+    /// <summary>
+    /// Created-timestamp of the newest Stripe event applied to this row. Stripe
+    /// retries and does not guarantee order; without this, a stale
+    /// subscription.updated arriving after subscription.deleted would resurrect
+    /// a canceled subscription locally.
+    /// </summary>
+    public DateTime? LastStripeEventAt { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

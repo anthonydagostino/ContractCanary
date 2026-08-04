@@ -21,10 +21,10 @@ public sealed class MatchEngine : IMatchEngine
 
         var naicsHit = naicsSet
             && !string.IsNullOrEmpty(notice.NaicsCode)
-            && profile.Naics.Contains(notice.NaicsCode!, StringComparer.OrdinalIgnoreCase);
+            && profile.Naics.Any(c => CodeCovers(c, notice.NaicsCode!));
         var pscHit = pscSet
             && !string.IsNullOrEmpty(notice.PscCode)
-            && profile.Psc.Contains(notice.PscCode!, StringComparer.OrdinalIgnoreCase);
+            && profile.Psc.Any(c => CodeCovers(c, notice.PscCode!));
 
         bool codeClause;
         if (!naicsSet && !pscSet)
@@ -99,6 +99,18 @@ public sealed class MatchEngine : IMatchEngine
         }
 
         return new MatchOutcome(true, reason);
+    }
+
+    /// <summary>
+    /// NAICS and PSC are hierarchical by character prefix: sector "54" covers
+    /// "541511", PSC category "D" covers "D302". The reference typeahead serves
+    /// codes at every level, so a selected code must cover its whole subtree —
+    /// exact-equality matching would make sector-level profiles match nothing.
+    /// </summary>
+    internal static bool CodeCovers(string selected, string noticeCode)
+    {
+        var sel = selected.Trim();
+        return sel.Length > 0 && noticeCode.StartsWith(sel, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

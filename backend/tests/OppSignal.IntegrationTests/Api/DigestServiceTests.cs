@@ -1,6 +1,8 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OppSignal.Application.Email;
 using OppSignal.Domain.Entities;
 using OppSignal.Domain.Enums;
 using OppSignal.Infrastructure.Email;
@@ -76,6 +78,68 @@ public class DigestServiceTests : ApiTestBase
             var digest = scope.ServiceProvider.GetRequiredService<IDigestService>();
             (await digest.SendUserDigestAsync(userId)).Should().BeFalse();
         }
+    }
+
+    [Fact]
+    public async Task A_failed_send_leaves_matches_unnotified_so_they_are_retried()
+    {
+        // Regression: SendDigestAsync returned "digest was non-empty", not "send
+        // succeeded", so a provider outage at the send hour permanently stamped
+        // every pending match/alert as notified — notifications silently lost.
+        var (_, _, userId) = await RegisterAndLoginAsync($"failsend_{Guid.NewGuid():N}@test.dev");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var noticeId = $"FLS-{Guid.NewGuid():N}"[..16];
+            db.Notices.Add(TestEntities.Notice(noticeId, naics: "541519", posted: DateTime.UtcNow.Date));
+            var profile = new MatchProfile
+            {
+                UserId = userId, Name = "IT", Naics = new() { "541519" },
+                IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            };
+            db.MatchProfiles.Add(profile);
+            await db.SaveChangesAsync();
+            db.NoticeMatches.Add(new NoticeMatch
+            {
+                NoticeId = noticeId, MatchProfileId = profile.Id, UserId = userId,
+                MatchedAt = DateTime.UtcNow, NotifiedAt = null,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Same app, same database — but the email transport always fails.
+        using var failingFactory = Factory.WithWebHostBuilder(b =>
+            b.ConfigureServices(s => s.AddScoped<IEmailSender, AlwaysFailingEmailSender>()));
+
+        using (var scope = failingFactory.Services.CreateScope())
+        {
+            var digest = scope.ServiceProvider.GetRequiredService<IDigestService>();
+            (await digest.SendUserDigestAsync(userId)).Should().BeFalse("the transport failed");
+        }
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.NoticeMatches.CountAsync(m => m.UserId == userId && m.NotifiedAt == null))
+                .Should().Be(1, "a failed send must leave the match pending for the next digest");
+            (await db.EmailLogs.CountAsync(e => e.UserId == userId && e.Kind == EmailKind.Digest && !e.Success))
+                .Should().Be(1, "the failure is still audited");
+        }
+
+        // Once the provider recovers, the pending match goes out.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var digest = scope.ServiceProvider.GetRequiredService<IDigestService>();
+            (await digest.SendUserDigestAsync(userId)).Should().BeTrue("the match survived the outage");
+        }
+    }
+
+    private sealed class AlwaysFailingEmailSender : IEmailSender
+    {
+        public string Provider => "FailingTest";
+        public Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken ct = default)
+            => Task.FromResult(new EmailSendResult(false, Provider, null, "simulated provider outage"));
     }
 
     [Fact]

@@ -90,16 +90,32 @@ public sealed class DigestService : IDigestService
             .Union(closingSavedUserIds)
             .Distinct().ToList();
 
+        // One clock reading for the whole batch: re-reading per user lets a
+        // long-running batch cross the top of the hour and silently skip the
+        // remaining users for the day.
+        var batchNowUtc = _clock.UtcNow;
         var sent = 0;
         foreach (var userId in userIds)
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
-            if (user is null || !user.EmailConfirmed) continue;
+            try
+            {
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+                if (user is null || !user.EmailConfirmed) continue;
 
-            var localNow = ToLocal(_clock.UtcNow, user.TimeZoneId);
-            if (localNow.Hour != sendHourLocal) continue;
+                var localNow = ToLocal(batchNowUtc, user.TimeZoneId);
+                if (localNow.Hour != sendHourLocal) continue;
 
-            if (await SendUserDigestAsync(userId, ct)) sent++;
+                if (await SendUserDigestAsync(userId, ct)) sent++;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // One user's failure must not abort digests for everyone after them.
+                _log.LogError(ex, "Digest failed for user {UserId}; continuing with remaining users", userId);
+            }
         }
 
         if (sent > 0) _log.LogInformation("Sent {Count} daily digests (hour {Hour})", sent, sendHourLocal);
@@ -177,16 +193,18 @@ public sealed class DigestService : IDigestService
 
         var sentOk = await _notifications.SendDigestAsync(model, ct);
 
-        // Mark ALL of the user's currently un-notified matches AND change-alerts as
-        // notified so nothing is emailed twice (backlog beyond the caps stays
-        // browsable in-app).
+        // Stamp exactly the matches and alerts that went into this email — the
+        // entities are already tracked from the build queries. Re-querying
+        // "everything un-notified" here would also stamp rows created by an
+        // ingest that ran between building the content and this point, silently
+        // losing those notifications. (Items beyond the display caps were still
+        // fetched for this digest and stay browsable in-app, so they're stamped
+        // by design.)
         if (sentOk)
         {
             var now = _clock.UtcNow;
-            var matchesToStamp = await _db.NoticeMatches.Where(m => m.UserId == userId && m.NotifiedAt == null).ToListAsync(ct);
-            foreach (var m in matchesToStamp) m.NotifiedAt = now;
-            var alertsToStamp = await _db.NoticeAlerts.Where(a => a.UserId == userId && a.NotifiedAt == null).ToListAsync(ct);
-            foreach (var a in alertsToStamp) a.NotifiedAt = now;
+            foreach (var x in rows) x.m.NotifiedAt = now;
+            foreach (var x in alertRows) x.a.NotifiedAt = now;
             await _db.SaveChangesAsync(ct);
         }
 

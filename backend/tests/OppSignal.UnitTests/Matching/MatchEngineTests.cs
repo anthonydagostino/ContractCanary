@@ -48,6 +48,31 @@ public class MatchEngineTests
         _engine.Evaluate(notice, profile).IsMatch.Should().BeTrue();
     }
 
+    // NAICS is hierarchical by digit prefix and the reference typeahead serves
+    // every level (its default suggestions are 2-digit sectors). A selected
+    // prefix must cover its whole subtree — exact-equality matching made
+    // sector-level profiles silently match nothing.
+    [Theory]
+    [InlineData("54", "541511", true)]     // sector covers leaf
+    [InlineData("5415", "541519", true)]   // industry group covers leaf
+    [InlineData("54", "236220", false)]    // unrelated subtree
+    [InlineData("55", "541511", false)]    // shared first digit is not a prefix hit
+    [InlineData("541511", "5415", false)]  // a leaf selection must not match a broader notice code
+    public void Naics_prefix_covers_the_selected_subtree(string selected, string noticeNaics, bool expected)
+    {
+        var notice = TestData.Notice(naics: noticeNaics);
+        var profile = TestData.Profile(naics: new() { selected });
+        _engine.Evaluate(notice, profile).IsMatch.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Naics_prefix_match_records_the_notice_code_in_the_reason()
+    {
+        var outcome = _engine.Evaluate(TestData.Notice(naics: "541511"), TestData.Profile(naics: new() { "54" }));
+        outcome.IsMatch.Should().BeTrue();
+        outcome.Reason.MatchedNaics.Should().Be("541511");
+    }
+
     // ----------------------------------------------------------------- PSC ---
 
     [Theory]
@@ -57,6 +82,19 @@ public class MatchEngineTests
     {
         var notice = TestData.Notice(psc: noticePsc);
         var profile = TestData.Profile(psc: new() { "D399" });
+        _engine.Evaluate(notice, profile).IsMatch.Should().Be(expected);
+    }
+
+    // PSC is hierarchical too: one-letter categories ("D" — IT services) sit
+    // above 4-char codes, and the reference data includes both levels.
+    [Theory]
+    [InlineData("D", "D302", true)]
+    [InlineData("D3", "D399", true)]
+    [InlineData("D", "R408", false)]
+    public void Psc_prefix_covers_the_selected_category(string selected, string noticePsc, bool expected)
+    {
+        var notice = TestData.Notice(psc: noticePsc);
+        var profile = TestData.Profile(psc: new() { selected });
         _engine.Evaluate(notice, profile).IsMatch.Should().Be(expected);
     }
 

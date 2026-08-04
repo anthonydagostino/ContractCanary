@@ -130,12 +130,20 @@ public sealed class AuthService : IAuthService
         if (existing is null)
             throw new UnauthorizedAppException("Invalid or expired refresh token.");
 
-        if (!existing.IsActive)
+        if (existing.RevokedAt is not null)
         {
             // A revoked/rotated token being presented again signals possible theft
             // (the legitimate holder already rotated it). Revoke the whole family so
             // both the attacker and the victim must re-authenticate.
             await RevokeAllAsync(existing.UserId, ct);
+            throw new UnauthorizedAppException("Invalid or expired refresh token.");
+        }
+
+        if (existing.ExpiresAt <= _clock.UtcNow)
+        {
+            // Mere expiry is not reuse evidence — a dormant device waking up must
+            // not log the user out of every other active session (and anyone
+            // holding a long-expired token must not be able to force that).
             throw new UnauthorizedAppException("Invalid or expired refresh token.");
         }
 

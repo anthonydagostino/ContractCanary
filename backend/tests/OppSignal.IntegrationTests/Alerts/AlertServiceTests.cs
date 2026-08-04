@@ -44,6 +44,26 @@ public class AlertServiceTests : IClassFixture<PostgresTestDatabase>, IAsyncLife
     }
 
     [Fact]
+    public async Task List_order_is_deterministic_after_the_join()
+    {
+        // Regression: OrderBy-before-Take becomes a LIMIT subquery whose result
+        // order the outer join does not preserve; the feed needs its own ORDER BY.
+        var user = Guid.NewGuid();
+        await using var db = _pg.NewContext();
+        db.Notices.Add(TestEntities.Notice("A9"));
+        await db.SaveChangesAsync();
+        for (var i = 0; i < 10; i++)
+            db.NoticeAlerts.Add(Alert(user, "A9", AlertType.DeadlineChanged, $"msg-{i}", _clock.UtcNow.AddMinutes(i)));
+        await db.SaveChangesAsync();
+
+        var list = await Service(db).ListAsync(user);
+
+        list.Select(a => a.CreatedAt).Should().BeInDescendingOrder();
+        list.First().Message.Should().Be("msg-9");
+        list.Last().Message.Should().Be("msg-0");
+    }
+
+    [Fact]
     public async Task Unread_count_ignores_already_read_alerts()
     {
         var user = Guid.NewGuid();

@@ -43,6 +43,31 @@ public class MatchingServiceTests : IClassFixture<PostgresTestDatabase>, IAsyncL
     }
 
     [Fact]
+    public async Task Backfill_across_batch_boundaries_with_tied_posted_dates_is_complete_and_duplicate_free()
+    {
+        // Regression: batches were ordered only by PostedDate (date-only, massively
+        // tied) with no unique tiebreak — successive Skip/Take pages could repeat a
+        // notice (unique-index violation → 500 after the profile row was already
+        // saved) or drop one (silently missing matches).
+        var user = Guid.NewGuid();
+        await using var db = _pg.NewContext();
+        var sharedPostedDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        for (var i = 0; i < 7; i++)
+            db.Notices.Add(TestEntities.Notice($"TIED-{i}", naics: "541512", posted: sharedPostedDate));
+        var profile = TestEntities.Profile(user, "IT", "541512");
+        db.MatchProfiles.Add(profile);
+        await db.SaveChangesAsync();
+
+        // batchSize 2 forces four pages over the seven tied rows.
+        var created = await Service(db).BackfillProfileAsync(profile.Id, user, batchSize: 2, ct: default);
+
+        created.Should().Be(7);
+        var matchIds = await db.NoticeMatches.AsNoTracking().Select(m => m.NoticeId).ToListAsync();
+        matchIds.Should().OnlyHaveUniqueItems();
+        matchIds.Should().BeEquivalentTo(Enumerable.Range(0, 7).Select(i => $"TIED-{i}"));
+    }
+
+    [Fact]
     public async Task Backfill_replaces_stale_matches_when_the_profile_filter_changes()
     {
         var user = Guid.NewGuid();

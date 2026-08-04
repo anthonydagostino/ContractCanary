@@ -38,11 +38,17 @@ public sealed class AlertService : IAlertService
 
     public async Task<IReadOnlyList<AlertDto>> ListAsync(Guid userId, CancellationToken ct = default)
     {
+        // The OrderBy before Take becomes a LIMIT subquery; the outer join's
+        // result order is unspecified without its own ORDER BY, so sort again
+        // after the join (with Id as a stable tiebreak for equal timestamps).
         var rows = await _db.NoticeAlerts.AsNoTracking()
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.CreatedAt)
+            .ThenByDescending(a => a.Id)
             .Take(MaxFeed)
             .Join(_db.Notices, a => a.NoticeId, n => n.NoticeId, (a, n) => new { a, n.Title })
+            .OrderByDescending(x => x.a.CreatedAt)
+            .ThenByDescending(x => x.a.Id)
             .ToListAsync(ct);
 
         return rows.Select(r => new AlertDto

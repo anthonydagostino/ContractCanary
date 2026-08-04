@@ -86,6 +86,36 @@ public class NoticeNormalizerTests
         n.PopState!.Length.Should().BeLessThanOrEqualTo(16);
     }
 
+    [Fact]
+    public void Oversize_bounded_strings_are_capped_instead_of_failing_the_batch()
+    {
+        // Regression (same class as the PopState overflow): any column-bounded
+        // string that exceeds its width fails the ENTIRE ingest batch on every
+        // run for the whole rolling window — a multi-day outage from one bad
+        // record. Title was unguarded.
+        var dto = new SamOpportunityDto
+        {
+            NoticeId = "x",
+            Title = new string('T', 2000),
+            SolicitationNumber = new string('S', 400),
+            FullParentPathName = new string('A', 1500),
+            NaicsCode = "541511-TOO-LONG-CODE",
+            ClassificationCode = "D302-TOO-LONG-CODE",
+            PlaceOfPerformance = new SamPlaceOfPerformance { Country = new SamCodeName { Code = "TOOLONGCOUNTRY" } },
+        };
+
+        var n = NoticeNormalizer.ToNotice(dto, Now);
+
+        n.Title.Length.Should().Be(1024);
+        n.SolicitationNumber!.Length.Should().Be(256);
+        n.AgencyPath!.Length.Should().Be(1024);
+        n.DepartmentName!.Length.Should().BeLessThanOrEqualTo(512);
+        n.OfficeName!.Length.Should().BeLessThanOrEqualTo(512);
+        n.NaicsCode!.Length.Should().Be(12);
+        n.PscCode!.Length.Should().Be(12);
+        n.PopCountry!.Length.Should().Be(8);
+    }
+
     [Theory]
     [InlineData("DEPT OF DEFENSE", "DEPT OF DEFENSE", null, "DEPT OF DEFENSE")]
     [InlineData("A.B.C.D", "A", "B", "D")]

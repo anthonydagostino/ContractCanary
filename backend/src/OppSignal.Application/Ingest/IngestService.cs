@@ -103,11 +103,24 @@ public sealed class IngestService : IIngestService
         }
         catch (Exception ex)
         {
-            run.Status = IngestStatus.Failed;
-            run.Error = ex.Message;
-            run.CompletedAt = _clock.UtcNow;
-            await _db.SaveChangesAsync(ct);
             _log.LogError(ex, "Ingest {Source} failed", run.Source);
+            try
+            {
+                // The tracker may still hold the entities whose save just
+                // failed (e.g. a DbUpdateException row); saving the failure
+                // status with them attached would throw again and leave the
+                // run stuck in Running forever.
+                _db.ClearChangeTracker();
+                run.Status = IngestStatus.Failed;
+                run.Error = ex.Message;
+                run.CompletedAt = _clock.UtcNow;
+                _db.IngestRuns.Update(run);
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (Exception saveEx)
+            {
+                _log.LogError(saveEx, "Could not record ingest failure for run {RunId}", run.Id);
+            }
         }
 
         return run;
@@ -206,7 +219,7 @@ public sealed class IngestService : IIngestService
         }
     }
 
-    private static void CopyMutable(Notice target, Notice src)
+    internal static void CopyMutable(Notice target, Notice src)
     {
         target.Title = src.Title;
         target.SolicitationNumber = src.SolicitationNumber;
@@ -229,6 +242,11 @@ public sealed class IngestService : IIngestService
         target.PopCountry = src.PopCountry;
         target.UiLink = src.UiLink;
         target.DescriptionLink = src.DescriptionLink;
+        // The live list API only carries a description LINK; the resolved text
+        // arrives separately. Copy when present so keyword matching and the
+        // detail page don't drift from RawJson, but never clobber stored text
+        // with null.
+        if (src.Description is not null) target.Description = src.Description;
         target.PrimaryContactName = src.PrimaryContactName;
         target.PrimaryContactEmail = src.PrimaryContactEmail;
         target.PrimaryContactPhone = src.PrimaryContactPhone;
