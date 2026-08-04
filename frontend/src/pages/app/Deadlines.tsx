@@ -47,7 +47,7 @@ export function Deadlines() {
 
           {noDeadline.length > 0 && (
             <div className="pt-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">No deadline</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">No deadline</p>
               {noDeadline.map((n) => (
                 <Link key={n.noticeId} to={`/app/opportunities/${n.noticeId}`} className="card mb-2 flex items-center gap-4 p-4 hover:shadow-md">
                   <div className="min-w-0 flex-1">

@@ -43,7 +43,7 @@ export function ResetPassword() {
           <div>
             <label className="label" htmlFor="password">New password</label>
             <input id="password" type="password" autoComplete="new-password" required className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <p className="mt-1 text-xs text-slate-400">At least 10 characters, with upper, lower, and a number.</p>
+            <p className="mt-1 text-xs text-slate-500">At least 10 characters, with upper, lower, and a number.</p>
           </div>
           <button type="submit" className="btn-primary w-full" disabled={busy}>
             {busy ? <Spinner className="h-4 w-4" /> : 'Reset password'}

@@ -51,9 +51,9 @@ export function Admin() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="card p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{s.label}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{s.label}</p>
             <p className="mt-1 text-2xl font-bold text-slate-900">{s.value}</p>
-            {s.hint && <p className="text-xs text-slate-400">{s.hint}</p>}
+            {s.hint && <p className="text-xs text-slate-500">{s.hint}</p>}
           </div>
         ))}
       </div>
@@ -72,7 +72,7 @@ export function Admin() {
             {m.lastIngestRun.error && <p className="text-sm text-red-600 sm:col-span-2">Error: {m.lastIngestRun.error}</p>}
           </div>
         ) : (
-          <p className="mt-2 text-sm text-slate-400">No ingest runs yet.</p>
+          <p className="mt-2 text-sm text-slate-500">No ingest runs yet.</p>
         )}
       </div>
     </div>

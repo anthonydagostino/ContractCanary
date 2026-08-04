@@ -70,7 +70,7 @@ function FilterChip({ label, count, active, onClick }: { label: string; count: n
         (active ? 'border-ink-900 bg-ink-900 text-white' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400')
       }
     >
-      {label} <span className={active ? 'text-slate-300' : 'text-slate-400'}>· {count}</span>
+      {label} <span className={active ? 'text-slate-300' : 'text-slate-500'}>· {count}</span>
     </button>
   )
 }
@@ -113,7 +113,7 @@ function PipelineCard({ item }: { item: SavedNoticeItem }) {
         </label>
         <Link to={`/app/opportunities/${item.noticeId}`} className="text-sm text-slate-500 hover:text-slate-700">View</Link>
         <button
-          className="text-sm text-slate-400 hover:text-red-600"
+          className="text-sm text-slate-500 hover:text-red-600"
           onClick={() => toggle.mutate({ noticeId: item.noticeId, save: false })}
         >
           Remove

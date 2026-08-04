@@ -67,7 +67,7 @@ export function Register() {
         <div>
           <label className="label" htmlFor="password">Password</label>
           <input id="password" type="password" autoComplete="new-password" required className="input" value={form.password} onChange={set('password')} />
-          <p className="mt-1 text-xs text-slate-400">At least 10 characters, with upper, lower, and a number.</p>
+          <p className="mt-1 text-xs text-slate-500">At least 10 characters, with upper, lower, and a number.</p>
         </div>
         <label className="flex items-start gap-2.5 text-xs text-slate-600">
           <input type="checkbox" required checked={accepted} onChange={(e) => setAccepted(e.target.checked)}

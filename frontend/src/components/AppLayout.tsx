@@ -31,11 +31,14 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow-lg">
+        Skip to content
+      </a>
       {/* Topbar (mobile) */}
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2"><Logo className="h-6 w-6" /><span className="font-bold">{branding.productName}</span></div>
         <button className="btn-ghost" onClick={() => setOpen((o) => !o)} aria-label="Menu">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
       </div>
 
@@ -49,7 +52,7 @@ export function AppLayout() {
             <div className="mb-6 hidden items-center gap-2 px-2 lg:flex">
               <Logo /><span className="text-lg font-bold tracking-tight text-slate-900">{branding.productName}</span>
             </div>
-            <nav className="flex-1 space-y-1">
+            <nav aria-label="Main" className="flex-1 space-y-1">
               {nav.map((item) => (
                 <NavLink
                   key={item.to}
@@ -61,7 +64,7 @@ export function AppLayout() {
                     isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100',
                   )}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d={item.icon} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d={item.icon} strokeLinecap="round" strokeLinejoin="round" /></svg>
                   {item.label}
                 </NavLink>
               ))}
@@ -73,10 +76,12 @@ export function AppLayout() {
                   isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100',
                 )}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M15 17h5l-1.4-1.4a2 2 0 01-.6-1.4V11a6 6 0 00-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M15 17h5l-1.4-1.4a2 2 0 01-.6-1.4V11a6 6 0 00-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 Alerts
                 {unread && unread.count > 0 && (
-                  <span className="ml-auto rounded-full bg-canary-400 px-1.5 py-0.5 text-xs font-bold text-ink-900">{unread.count}</span>
+                  <span className="ml-auto rounded-full bg-canary-400 px-1.5 py-0.5 text-xs font-bold text-ink-900">
+                    {unread.count}<span className="sr-only"> unread alerts</span>
+                  </span>
                 )}
               </NavLink>
               {me?.isAdmin && (
@@ -84,7 +89,7 @@ export function AppLayout() {
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
                   isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100',
                 )}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v6m-6 0H5a2 2 0 01-2-2V9a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 19v-6a2 2 0 012-2h2a2 2 0 012 2v6m-6 0H5a2 2 0 01-2-2V9a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   Admin
                 </NavLink>
               )}
@@ -94,7 +99,7 @@ export function AppLayout() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-800">{me?.fullName || me?.email}</p>
-                  <p className="truncate text-xs text-slate-400">{me?.companyName}</p>
+                  <p className="truncate text-xs text-slate-500">{me?.companyName}</p>
                 </div>
                 <Badge tone={me?.plan === 'Pro' ? 'indigo' : me?.plan === 'Starter' ? 'blue' : 'gray'}>{me?.plan}</Badge>
               </div>
@@ -106,9 +111,9 @@ export function AppLayout() {
           </div>
         </aside>
 
-        {open && <div className="fixed inset-0 z-20 bg-slate-900/20 lg:hidden" onClick={() => setOpen(false)} />}
+        {open && <div aria-hidden="true" className="fixed inset-0 z-20 bg-slate-900/20 lg:hidden" onClick={() => setOpen(false)} />}
 
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>

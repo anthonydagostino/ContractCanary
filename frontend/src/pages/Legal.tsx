@@ -20,7 +20,7 @@ export function LegalPage({ doc }: { doc: 'terms' | 'privacy' }) {
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
           {isTerms ? 'Terms of Service' : 'Privacy Policy'}
         </h1>
-        <p className="mt-2 text-sm text-slate-400">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="mt-2 text-sm text-slate-500">Last updated: {new Date().toLocaleDateString()}</p>
 
         <div className="prose prose-slate mt-8 max-w-none text-sm leading-6 text-slate-700">
           {isTerms ? <TermsBody /> : <PrivacyBody />}

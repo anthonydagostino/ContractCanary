@@ -144,7 +144,7 @@ export function Settings() {
           )}
           <button className="btn-ghost" onClick={openPortal} disabled={portal.isPending}>Manage billing</button>
         </div>
-        <p className="text-xs text-slate-400">Billing is handled securely by Stripe. Cancel anytime from Manage billing.</p>
+        <p className="text-xs text-slate-500">Billing is handled securely by Stripe. Cancel anytime from Manage billing.</p>
       </div>
 
       {/* Your data & account */}
@@ -197,7 +197,7 @@ function DataAndAccountCard() {
         <button className="btn-secondary" onClick={download} disabled={exportData.isPending}>
           {exportData.isPending ? <Spinner className="h-4 w-4" /> : 'Download my data'}
         </button>
-        <p className="text-xs text-slate-400">A JSON file of your account, match profiles, saved opportunities, and alerts.</p>
+        <p className="text-xs text-slate-500">A JSON file of your account, match profiles, saved opportunities, and alerts.</p>
       </div>
 
       <hr className="border-slate-100" />
@@ -272,7 +272,7 @@ function ChangePasswordCard() {
             onChange={(e) => setConfirm(e.target.value)} required minLength={10} />
         </div>
       </div>
-      <p className="text-xs text-slate-400">At least 10 characters, with an uppercase letter, a lowercase letter, and a digit.</p>
+      <p className="text-xs text-slate-500">At least 10 characters, with an uppercase letter, a lowercase letter, and a digit.</p>
       <button type="submit" className="btn-primary" disabled={change.isPending}>
         {change.isPending ? <Spinner className="h-4 w-4" /> : 'Change password'}
       </button>

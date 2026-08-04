@@ -50,7 +50,7 @@ export function Dashboard() {
         action={me?.limits.canExportCsv ? (
           <button className="btn-secondary" onClick={downloadCsv}>Export CSV</button>
         ) : (
-          <span className="text-xs text-slate-400">CSV export is a Pro feature</span>
+          <span className="text-xs text-slate-500">CSV export is a Pro feature</span>
         )}
       />
 
@@ -86,7 +86,7 @@ export function Dashboard() {
             />
             <StatCard value={stats.saved} label="Saved" tone="slate" to="/app/saved" />
           </div>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-slate-500">
             Watching {stats.totalActive.toLocaleString()} open federal opportunities for you.
           </p>
         </div>
@@ -96,9 +96,10 @@ export function Dashboard() {
       <div className="card mb-4 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="relative flex-1">
-            <svg className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+            <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
             <input
               className="input pl-9"
+              aria-label="Search opportunities"
               placeholder="Search title, description, solicitation number…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -111,6 +112,7 @@ export function Dashboard() {
             </label>
             <select
               className="input w-auto"
+              aria-label="Filter by match profile"
               value={q.profileId ?? ''}
               onChange={(e) => patch({ profileId: e.target.value || undefined, matchedOnly: false })}
             >
@@ -119,6 +121,7 @@ export function Dashboard() {
             </select>
             <select
               className="input w-auto"
+              aria-label="Sort order"
               value={`${q.sort}:${q.direction}`}
               onChange={(e) => { const [sort, direction] = e.target.value.split(':'); patch({ sort: sort as 'posted' | 'deadline', direction: direction as 'asc' | 'desc' }) }}
             >

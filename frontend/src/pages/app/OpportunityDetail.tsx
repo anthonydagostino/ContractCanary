@@ -123,7 +123,7 @@ export function OpportunityDetail() {
         <div className="card mt-6 p-6">
           <div className="flex items-baseline justify-between gap-2">
             <p className="text-sm font-semibold text-slate-900">More open opportunities like this</p>
-            <span className="text-xs text-slate-400">Same NAICS or agency</span>
+            <span className="text-xs text-slate-500">Same NAICS or agency</span>
           </div>
           <div className="mt-3 divide-y divide-slate-100">
             {similar.map((s) => <SimilarRow key={s.noticeId} item={s} />)}
@@ -191,7 +191,7 @@ function AiOverview({ summary, keyPoints, fitNote }: { summary: string; keyPoint
 function Field({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
       <p className={'mt-0.5 text-sm text-slate-800 ' + (mono ? 'font-mono' : '')}>{value || '—'}</p>
     </div>
   )

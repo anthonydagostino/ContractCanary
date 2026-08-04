@@ -52,7 +52,7 @@ export function Pricing() {
           </div>
         )}
 
-        <p className="mt-10 text-center text-sm text-slate-400">
+        <p className="mt-10 text-center text-sm text-slate-500">
           Prices in USD. Billing is handled securely by Stripe. Data comes from the free public SAM.gov API.
         </p>
       </section>

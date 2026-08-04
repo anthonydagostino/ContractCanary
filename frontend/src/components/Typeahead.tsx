@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Badge, Spinner } from './ui'
 
 export interface Option { value: string; label: string; hint?: string }
@@ -15,6 +15,7 @@ interface Props {
 
 /** Debounced, keyboard-free multi-select typeahead over a server-backed search. */
 export function Typeahead({ label, placeholder, values, onChange, useSearch, toOption, help }: Props) {
+  const id = useId()
   const [q, setQ] = useState('')
   const [debounced, setDebounced] = useState('')
   const [open, setOpen] = useState(false)
@@ -51,41 +52,50 @@ export function Typeahead({ label, placeholder, values, onChange, useSearch, toO
 
   return (
     <div ref={boxRef} className="relative">
-      <label className="label">{label}</label>
+      <label className="label" htmlFor={id}>{label}</label>
       {values.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {values.map((v) => (
             <span key={v} className="badge bg-brand-50 text-brand-700">
               {labelFor.get(v) ?? v}
-              <button onClick={() => remove(v)} className="ml-1 text-brand-400 hover:text-brand-700" aria-label={`Remove ${v}`}>×</button>
+              <button type="button" onClick={() => remove(v)} className="ml-1 text-brand-400 hover:text-brand-700" aria-label={`Remove ${labelFor.get(v) ?? v}`}>×</button>
             </span>
           ))}
         </div>
       )}
       <input
+        id={id}
         className="input"
         placeholder={placeholder}
         value={q}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={`${id}-listbox`}
+        aria-autocomplete="list"
+        aria-describedby={help ? `${id}-help` : undefined}
         onChange={(e) => { setQ(e.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)}
       />
-      {help && <p className="mt-1 text-xs text-slate-400">{help}</p>}
+      {help && <p id={`${id}-help`} className="mt-1 text-xs text-slate-500">{help}</p>}
       {open && (q.length > 0 || options.length > 0) && (
-        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-          {isFetching && <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400"><Spinner className="h-4 w-4" /> Searching…</div>}
-          {!isFetching && options.length === 0 && <div className="px-3 py-2 text-sm text-slate-400">No matches</div>}
+        <div id={`${id}-listbox`} role="listbox" aria-label={label} className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+          {isFetching && <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500"><Spinner className="h-4 w-4" /> Searching…</div>}
+          {!isFetching && options.length === 0 && <div className="px-3 py-2 text-sm text-slate-500">No matches</div>}
           {options.map((o) => {
             const selected = values.includes(o.value)
             return (
               <button
                 key={o.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
                 onClick={() => (selected ? remove(o.value) : add(o.value))}
-                className="flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                className="flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
               >
                 <span>
                   <span className="font-medium text-slate-800">{o.value}</span>
                   <span className="ml-2 text-slate-500">{o.label}</span>
-                  {o.hint && <span className="ml-2 text-xs text-slate-400">{o.hint}</span>}
+                  {o.hint && <span className="ml-2 text-xs text-slate-500">{o.hint}</span>}
                 </span>
                 {selected && <Badge tone="blue">Added</Badge>}
               </button>
@@ -108,6 +118,7 @@ interface TagInputProps {
 
 /** Free-text tag input (keywords). Enter or comma commits a tag. */
 export function TagInput({ label, placeholder, values, onChange, help, transform }: TagInputProps) {
+  const id = useId()
   const [text, setText] = useState('')
   function commit() {
     const v = (transform ? transform(text) : text).trim()
@@ -122,7 +133,7 @@ export function TagInput({ label, placeholder, values, onChange, help, transform
           {values.map((v) => (
             <span key={v} className="badge bg-slate-100 text-slate-700">
               {v}
-              <button onClick={() => onChange(values.filter((x) => x !== v))} className="ml-1 text-slate-400 hover:text-slate-700" aria-label={`Remove ${v}`}>×</button>
+              <button onClick={() => onChange(values.filter((x) => x !== v))} className="ml-1 text-slate-500 hover:text-slate-700" aria-label={`Remove ${v}`}>×</button>
             </span>
           ))}
         </div>
@@ -138,7 +149,7 @@ export function TagInput({ label, placeholder, values, onChange, help, transform
         }}
         onBlur={commit}
       />
-      {help && <p className="mt-1 text-xs text-slate-400">{help}</p>}
+      {help && <p id={`${id}-help`} className="mt-1 text-xs text-slate-500">{help}</p>}
     </div>
   )
 }
@@ -156,8 +167,8 @@ export function ChipMultiSelect<T extends string>({ label, options, values, onCh
     onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v])
   }
   return (
-    <div>
-      <label className="label">{label}</label>
+    <div role="group" aria-label={label}>
+      <span className="label">{label}</span>
       <div className="flex flex-wrap gap-2">
         {options.map((o) => {
           const active = values.includes(o.value)
@@ -165,6 +176,7 @@ export function ChipMultiSelect<T extends string>({ label, options, values, onCh
             <button
               key={o.value}
               type="button"
+              aria-pressed={active}
               onClick={() => toggle(o.value)}
               className={
                 'rounded-full border px-3 py-1 text-sm transition ' +

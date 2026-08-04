@@ -38,7 +38,7 @@
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
   .input {
-    @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus:border-ink-500 focus:outline-none focus:ring-1 focus:ring-ink-500;
+    @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm placeholder:text-slate-500 focus:border-ink-500 focus:outline-none focus:ring-1 focus:ring-ink-500;
   }
   .label {
     @apply mb-1 block text-sm font-medium text-slate-700;

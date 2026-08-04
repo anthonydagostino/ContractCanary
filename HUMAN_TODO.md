@@ -139,6 +139,7 @@ add a key — exactly like the SAM and email switches — so they never risk the
 | Government/accuracy disclaimers + honest marketing copy | ✅ Built & on | — |
 | CAN-SPAM one-click unsubscribe + postal address in digest | ✅ Built & on | Set `BRANDING_POSTAL_ADDRESS` before real email |
 | Production resilience (DB retry, pool sizing, graceful shutdown) | ✅ Built & on | — |
+| Accessibility (WCAG 2.1 AA first pass) | ✅ Built & on | — |
 | Support email (support@contract-canary.com) | ✅ Done by you | Cloudflare Email Routing → your Gmail |
 | Real email (verification + digests) | ⏳ Waiting on Postmark approval | Token in hand; on approval set `POSTMARK_SERVER_TOKEN` + `EMAIL_PROVIDER=Postmark` |
 | Payments | ⏳ Your task | Stripe keys (see Part: Stripe) |
@@ -151,6 +152,11 @@ per-user in-app notification preferences once there's more to tune.
 
 **Changelog (newest first) — features engineering added after the initial build:**
 
+- Accessibility (WCAG 2.1 AA) first pass: the site is now far friendlier to screen-reader
+  and keyboard users, and closer to the standard courts apply in ADA website suits —
+  contrast fixes, properly linked form labels, named icon buttons, announced loading/error
+  states, skip links, and keyboard focus indicators. Also fixed a real bug this uncovered:
+  some buttons inside forms could accidentally submit the form when clicked.
 - Launch-readiness pass (liability, compliance & scaling): after researching what
   established SaaS do — negative-option/auto-renewal law (ROSCA + state ARLs), the
   FTC "click-to-cancel" rule status, CalOPPA/CCPA/GDPR, CAN-SPAM, ADA/WCAG, FTC
@@ -293,11 +299,11 @@ before you take real payments.** Here's the split.
 4. **In Postmark:** send the **digest on a "Broadcast" message stream** and
    verification/receipts on a "Transactional" stream (Broadcasts enforce unsubscribe and
    protect deliverability).
-5. **Accessibility (ADA/WCAG 2.1 AA):** website-accessibility lawsuits are common. A full
-   pass is a small project; the highest-value fixes, in order, are: color contrast → image
-   alt text → form labels → `aria-label` on icon-only buttons → visible keyboard focus →
-   landmarks + skip-to-content link → text-based error messages. Consider an accessibility
-   statement page. (Flagged as a recommended next pass, not a blocker to first launch.)
+5. **Accessibility (ADA/WCAG 2.1 AA): ✅ engineering did the first pass** — fixed color
+   contrast on light backgrounds, linked every form label to its field, labeled all
+   icon-only buttons for screen readers, added toggle/announce semantics (saved-star,
+   loading, error alerts), skip-to-content links, and keyboard focus rings. Nothing for
+   you to do now; a paid audit is only worth considering once you have real revenue.
 
 **🗄️ Operations you should set up (existential):**
 6. **Backups + a *tested* restore.** Your single-box Postgres has none today — one bad

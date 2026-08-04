@@ -144,7 +144,7 @@ export function ProfileEditor() {
             <input type="checkbox" checked={form.isPriority} disabled={!me?.limits.canPrioritize}
               onChange={(e) => patch({ isPriority: e.target.checked })} />
             <span className="text-sm text-slate-700">
-              Priority ingest {me?.limits.canPrioritize ? '' : <span className="text-xs text-slate-400">(Pro only)</span>}
+              Priority ingest {me?.limits.canPrioritize ? '' : <span className="text-xs text-slate-500">(Pro only)</span>}
             </span>
           </label>
         </div>

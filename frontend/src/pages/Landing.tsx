@@ -97,7 +97,7 @@ function DigestPreview() {
           <Logo className="h-7 w-7" />
           <div>
             <p className="text-sm font-semibold text-ink-900">Your daily digest</p>
-            <p className="text-xs text-slate-400">Thursday · 7:00 AM</p>
+            <p className="text-xs text-slate-500">Thursday · 7:00 AM</p>
           </div>
         </div>
         <span className="badge bg-canary-100 text-canary-800">3 new matches</span>
@@ -304,7 +304,7 @@ export function Landing() {
               </tbody>
             </table>
           </div>
-          <p className="mt-4 text-center text-xs text-slate-400">Comparison reflects typical offerings; not an endorsement of or by any named product.</p>
+          <p className="mt-4 text-center text-xs text-slate-500">Comparison reflects typical offerings; not an endorsement of or by any named product.</p>
         </div>
       </section>
 
@@ -347,6 +347,6 @@ export function Landing() {
 
 function Cell({ value, highlight }: { value: string; highlight?: boolean }) {
   if (value === 'yes') return <span className="inline-flex items-center gap-1.5 text-emerald-700"><Icon.Check className="h-4 w-4" /> Yes</span>
-  if (value === 'no') return <span className="text-slate-400">—</span>
+  if (value === 'no') return <span className="text-slate-500">—</span>
   return <span className={highlight ? 'font-semibold text-ink-900' : 'text-slate-600'}>{value}</span>
 }

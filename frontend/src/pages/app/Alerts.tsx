@@ -61,7 +61,7 @@ function AlertCard({ alert }: { alert: Alert }) {
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={cancelled ? 'red' : 'amber'}>{alert.typeLabel}</Badge>
             {!alert.read && <span className="h-1.5 w-1.5 rounded-full bg-canary-500" title="New" />}
-            <span className="text-xs text-slate-400">{formatDateTime(alert.createdAt)}</span>
+            <span className="text-xs text-slate-500">{formatDateTime(alert.createdAt)}</span>
           </div>
           <p className="mt-1 text-sm font-medium text-ink-900">{alert.message}</p>
           <Link to={`/app/opportunities/${alert.noticeId}`} className="mt-0.5 block truncate text-sm text-slate-500 hover:text-slate-700">
