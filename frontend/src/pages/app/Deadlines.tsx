@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { PageHeader } from '../../components/PageHeader'
 import { Badge, EmptyState, PageLoader } from '../../components/ui'
 import { useNotices } from '../../hooks/queries'
-import { deadlineLabel, formatDateTime } from '../../lib/format'
+import { deadlineLabel, deadlineTile, formatDateTime } from '../../lib/format'
 
 export function Deadlines() {
   // Saved items sorted by response deadline (soonest first). API sorts nulls last.
@@ -27,11 +27,12 @@ export function Deadlines() {
         <div className="space-y-3">
           {withDeadline.map((n) => {
             const dl = deadlineLabel(n.responseDeadline)
+            const tile = deadlineTile(dl.text)
             return (
               <Link key={n.noticeId} to={`/app/opportunities/${n.noticeId}`} className="card flex items-center gap-4 p-4 transition hover:shadow-md">
                 <div className={`flex h-14 w-16 flex-none flex-col items-center justify-center rounded-lg ${dl.tone === 'red' ? 'bg-red-50 text-red-700' : dl.tone === 'amber' ? 'bg-amber-50 text-amber-800' : dl.tone === 'green' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                  <span className="text-xs font-medium">{dl.text.split(' ')[0]}</span>
-                  <span className="text-[10px] uppercase">{dl.text.includes('day') ? 'days' : ''}</span>
+                  <span className="text-xs font-medium">{tile.top}</span>
+                  <span className="text-[10px] uppercase">{tile.caption}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-slate-900">{n.title}</p>
@@ -44,6 +45,12 @@ export function Deadlines() {
               </Link>
             )
           })}
+
+          {data.total > data.items.length && (
+            <p className="text-xs text-slate-500">
+              Showing the {data.items.length} soonest deadlines — you have {data.total - data.items.length} more saved.
+            </p>
+          )}
 
           {noDeadline.length > 0 && (
             <div className="pt-4">

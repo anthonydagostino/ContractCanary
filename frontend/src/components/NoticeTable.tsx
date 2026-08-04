@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import type { NoticeListItem } from '../lib/types'
-import { Badge, StarButton } from './ui'
+import { Alert, Badge, StarButton } from './ui'
 import { deadlineLabel, formatDate } from '../lib/format'
 import { useToggleSaved } from '../hooks/queries'
 
@@ -10,6 +10,7 @@ export function NoticeTable({ items }: { items: NoticeListItem[] }) {
 
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      {toggle.isError && <div className="p-3"><Alert>Could not update the saved state. Please try again.</Alert></div>}
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
           <tr>

@@ -1,21 +1,29 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { PageHeader } from '../../components/PageHeader'
 import { NoticeTable } from '../../components/NoticeTable'
-import { EmptyState, Pagination, PageLoader, Badge } from '../../components/ui'
-import { noticesCsvUrl, useNotices, useNoticeTypes, useProfiles, useUserStats } from '../../hooks/queries'
-import { getAccessToken } from '../../lib/api'
+import { Alert, EmptyState, Pagination, PageLoader, Badge } from '../../components/ui'
+import { useNotices, useNoticeTypes, useProfiles, useUserStats } from '../../hooks/queries'
+import { api, apiError } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
+import { noticeQueryFromSearch, noticeQueryString } from '../../lib/noticeParams'
 import type { NoticeQueryParams, NoticeType } from '../../lib/types'
 
 export function Dashboard() {
   const { me } = useAuth()
+  const location = useLocation()
   const { data: profiles } = useProfiles()
   const { data: noticeTypes } = useNoticeTypes()
   const { data: stats } = useUserStats()
 
   const [searchInput, setSearchInput] = useState('')
-  const [q, setQ] = useState<NoticeQueryParams>({ page: 1, pageSize: 25, sort: 'posted', direction: 'desc', matchedOnly: false })
+  // Honor filters carried in the URL (Profiles → "View matches" links here
+  // with ?profileId=…).
+  const [q, setQ] = useState<NoticeQueryParams>(() => ({
+    page: 1, pageSize: 25, sort: 'posted', direction: 'desc', matchedOnly: false,
+    ...noticeQueryFromSearch(location.search),
+  }))
+  const [exportError, setExportError] = useState('')
 
   // Debounce the search box into the query.
   useEffect(() => {
@@ -31,15 +39,19 @@ export function Dashboard() {
     patch({ noticeTypes: cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t] })
   }
 
-  const csvHref = useMemo(() => noticesCsvUrl(q), [q])
   async function downloadCsv() {
-    const res = await fetch(csvHref, { headers: { Authorization: `Bearer ${getAccessToken()}` } })
-    if (!res.ok) return
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = 'oppsignal-export.csv'; a.click()
-    URL.revokeObjectURL(url)
+    setExportError('')
+    try {
+      // Use the api client so an expired access token refreshes instead of
+      // silently failing, and surface any error to the user.
+      const res = await api.get<Blob>(`/notices/export.csv?${noticeQueryString(q)}`, { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url; a.download = 'contractcanary-export.csv'; a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setExportError(apiError(err, 'Could not export the CSV. Please try again.'))
+    }
   }
 
   return (
@@ -53,6 +65,8 @@ export function Dashboard() {
           <span className="text-xs text-slate-500">CSV export is a Pro feature</span>
         )}
       />
+
+      {exportError && <div className="mb-4"><Alert>{exportError}</Alert></div>}
 
       {/* First-run onboarding: no alert profiles yet */}
       {profiles && profiles.length === 0 && (

@@ -34,6 +34,8 @@ export function useSaveProfile() {
          : (await api.post<MatchProfile>('/profiles', input)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['profiles'] })
+      // Without this, re-opening the editor within staleTime shows pre-save values.
+      qc.invalidateQueries({ queryKey: ['profile'] })
       qc.invalidateQueries({ queryKey: ['notices'] })
     },
   })
@@ -116,14 +118,12 @@ export function useToggleSaved() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notices'] })
       qc.invalidateQueries({ queryKey: ['notice'] })
+      // Saved badges in the similar-opportunities list live under their own key.
+      qc.invalidateQueries({ queryKey: ['notice-similar'] })
       qc.invalidateQueries({ queryKey: ['user-stats'] })
       qc.invalidateQueries({ queryKey: ['saved-pipeline'] })
     },
   })
-}
-
-export function noticesCsvUrl(q: NoticeQueryParams): string {
-  return `/api/notices/export.csv?${noticeQueryString(q)}`
 }
 
 // ---- Reference (typeaheads) ----

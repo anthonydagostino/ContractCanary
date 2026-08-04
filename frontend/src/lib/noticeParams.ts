@@ -24,3 +24,13 @@ export function buildNoticeParams(q: NoticeQueryParams): URLSearchParams {
 }
 
 export const noticeQueryString = (q: NoticeQueryParams) => buildNoticeParams(q).toString()
+
+/**
+ * Query overrides carried in the dashboard URL (e.g. Profiles → "View matches"
+ * links to /app?profileId=…). Pure + testable.
+ */
+export function noticeQueryFromSearch(search: string): Partial<NoticeQueryParams> {
+  const p = new URLSearchParams(search)
+  const profileId = p.get('profileId')
+  return profileId ? { profileId } : {}
+}

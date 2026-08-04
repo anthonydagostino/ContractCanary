@@ -33,12 +33,16 @@ export function ProfileEditor() {
   const [form, setForm] = useState<ProfileInput>(() => (prefill ? { ...empty, ...prefill } : empty))
   const [error, setError] = useState('')
 
+  // Hydrate the form once per profile. Re-running on every query delivery
+  // would wipe in-progress edits when a background refetch lands.
+  const [hydratedId, setHydratedId] = useState<string | null>(null)
   useEffect(() => {
-    if (existing) {
+    if (existing && existing.id !== hydratedId) {
       const { id: _id, matchCount: _m, createdAt: _c, updatedAt: _u, ...input } = existing
       setForm(input)
+      setHydratedId(existing.id)
     }
-  }, [existing])
+  }, [existing, hydratedId])
 
   const patch = (p: Partial<ProfileInput>) => setForm((f) => ({ ...f, ...p }))
 

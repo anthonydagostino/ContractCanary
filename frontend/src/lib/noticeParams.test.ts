@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildNoticeParams } from './noticeParams'
+import { buildNoticeParams, noticeQueryFromSearch } from './noticeParams'
 
 describe('buildNoticeParams', () => {
   it('omits empty, false, and undefined values', () => {
@@ -28,5 +28,19 @@ describe('buildNoticeParams', () => {
     expect(p.get('direction')).toBe('asc')
     expect(p.get('page')).toBe('3')
     expect(p.get('pageSize')).toBe('25')
+  })
+})
+
+describe('noticeQueryFromSearch', () => {
+  // Regression: Profiles → "View matches" links to /app?profileId=…, but the
+  // dashboard ignored the URL entirely and showed the unfiltered list.
+  it('reads profileId from the URL search string', () => {
+    expect(noticeQueryFromSearch('?profileId=abc-123')).toEqual({ profileId: 'abc-123' })
+  })
+
+  it('returns no overrides for an empty or unrelated search string', () => {
+    expect(noticeQueryFromSearch('')).toEqual({})
+    expect(noticeQueryFromSearch('?utm_source=x')).toEqual({})
+    expect(noticeQueryFromSearch('?profileId=')).toEqual({})
   })
 })

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { api, clearTokens, getRefreshToken, storeTokens } from './api'
+import { api, clearTokens, getRefreshToken, onAuthFailure, storeTokens } from './api'
 import type { AuthTokens, Me } from './types'
 
 interface AuthState {
@@ -35,6 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     boot()
   }, [])
+
+  // When the refresh token is rejected mid-session (expired, or revoked by a
+  // password change elsewhere), drop `me` so ProtectedRoute sends the user to
+  // login instead of leaving a dead session rendered.
+  useEffect(() => onAuthFailure(() => setMe(null)), [])
 
   const value = useMemo<AuthState>(
     () => ({

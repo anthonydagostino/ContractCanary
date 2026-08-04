@@ -7,9 +7,23 @@ let accessToken: string | null = null
 export const getAccessToken = () => accessToken
 export const setAccessToken = (t: string | null) => { accessToken = t }
 
-export const getRefreshToken = () => localStorage.getItem(REFRESH_KEY)
-export const setRefreshToken = (t: string | null) =>
-  t ? localStorage.setItem(REFRESH_KEY, t) : localStorage.removeItem(REFRESH_KEY)
+// localStorage throws in some privacy modes and blocked-storage browsers; a
+// thrown getter during boot would leave the app stuck on the loading spinner.
+export const getRefreshToken = (): string | null => {
+  try {
+    return localStorage.getItem(REFRESH_KEY)
+  } catch {
+    return null
+  }
+}
+export const setRefreshToken = (t: string | null) => {
+  try {
+    if (t) localStorage.setItem(REFRESH_KEY, t)
+    else localStorage.removeItem(REFRESH_KEY)
+  } catch {
+    // Storage unavailable: the session simply won't survive a reload.
+  }
+}
 
 export function storeTokens(tokens: AuthTokens) {
   setAccessToken(tokens.accessToken)
@@ -19,6 +33,18 @@ export function storeTokens(tokens: AuthTokens) {
 export function clearTokens() {
   setAccessToken(null)
   setRefreshToken(null)
+}
+
+// Fired when the session is unrecoverable (refresh token rejected). The auth
+// provider subscribes so a dead session redirects to login instead of leaving
+// the app rendered with every request failing.
+const authFailureListeners = new Set<() => void>()
+export function onAuthFailure(listener: () => void): () => void {
+  authFailureListeners.add(listener)
+  return () => authFailureListeners.delete(listener)
+}
+export function emitAuthFailure() {
+  authFailureListeners.forEach((l) => l())
 }
 
 export const api = axios.create({ baseURL: '/api' })
@@ -66,6 +92,7 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newToken}`
         return api(original)
       }
+      emitAuthFailure()
     }
     return Promise.reject(error)
   },

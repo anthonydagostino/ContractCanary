@@ -1,19 +1,36 @@
 import { Link, useParams } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNoticeDetail, useSimilarNotices, useToggleSaved } from '../../hooks/queries'
-import { Badge, PageLoader, EmptyState, StarButton } from '../../components/ui'
+import { Alert, Badge, PageLoader, EmptyState, StarButton } from '../../components/ui'
 import { deadlineLabel, formatDate, formatDateTime } from '../../lib/format'
 import type { NoticeListItem } from '../../lib/types'
 
 export function OpportunityDetail() {
   const { noticeId } = useParams()
-  const { data: n, isLoading } = useNoticeDetail(noticeId)
+  const { data: n, isLoading, isError, refetch } = useNoticeDetail(noticeId)
   const { data: similar } = useSimilarNotices(noticeId)
   const toggle = useToggleSaved()
   const [note, setNote] = useState('')
   const [noteOpen, setNoteOpen] = useState(false)
 
+  // The route element is reused when navigating between opportunities (e.g.
+  // via "More opportunities like this"), so reset the note editor or a note
+  // typed for one notice would be saved onto another.
+  useEffect(() => {
+    setNote('')
+    setNoteOpen(false)
+  }, [noticeId])
+
   if (isLoading) return <PageLoader />
+  if (isError) {
+    return (
+      <EmptyState
+        title="Couldn't load this opportunity"
+        hint="A network or server error occurred — the opportunity may still exist."
+        action={<button type="button" className="btn-secondary" onClick={() => refetch()}>Try again</button>}
+      />
+    )
+  }
   if (!n) return <EmptyState title="Opportunity not found" action={<Link to="/app" className="btn-secondary">Back to opportunities</Link>} />
 
   const dl = deadlineLabel(n.responseDeadline)
@@ -43,6 +60,7 @@ export function OpportunityDetail() {
       </Link>
 
       <div className="card p-6">
+        {toggle.isError && <div className="mb-4"><Alert>Could not update this opportunity. Please try again.</Alert></div>}
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="mb-2 flex flex-wrap gap-2">

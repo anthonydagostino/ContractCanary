@@ -101,6 +101,10 @@ function PipelineCard({ item }: { item: SavedNoticeItem }) {
 
       {item.note && <p className="mt-2 text-sm text-slate-600">{item.note}</p>}
 
+      {(update.isError || toggle.isError) && (
+        <p role="alert" className="mt-2 text-xs text-red-600">Could not update this opportunity — please try again.</p>
+      )}
+
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-xs text-slate-500">
           Stage

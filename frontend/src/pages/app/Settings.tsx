@@ -22,6 +22,7 @@ export function Settings() {
 
   const [form, setForm] = useState({ fullName: '', companyName: '', timeZoneId: 'America/New_York' })
   const [savedMsg, setSavedMsg] = useState('')
+  const [saveError, setSaveError] = useState('')
   const [billingError, setBillingError] = useState('')
   const [renewalConsent, setRenewalConsent] = useState(false)
 
@@ -34,9 +35,14 @@ export function Settings() {
   async function saveAccount(e: React.FormEvent) {
     e.preventDefault()
     setSavedMsg('')
-    await update.mutateAsync(form)
-    await refreshMe()
-    setSavedMsg('Saved.')
+    setSaveError('')
+    try {
+      await update.mutateAsync(form)
+      await refreshMe()
+      setSavedMsg('Saved.')
+    } catch (err) {
+      setSaveError(apiError(err, 'Could not save your profile. Please try again.'))
+    }
   }
 
   async function startCheckout(plan: PlanTier) {
@@ -69,6 +75,7 @@ export function Settings() {
       <form onSubmit={saveAccount} className="card mb-6 space-y-4 p-6">
         <p className="text-sm font-semibold text-slate-900">Profile</p>
         {savedMsg && <Alert tone="green">{savedMsg}</Alert>}
+        {saveError && <Alert>{saveError}</Alert>}
         <div>
           <label className="label">Email</label>
           <input className="input bg-slate-50" value={me.email} disabled />
