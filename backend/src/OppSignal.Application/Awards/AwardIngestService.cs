@@ -64,13 +64,20 @@ public sealed class AwardIngestService : IAwardIngestService
         var today = DateOnly.FromDateTime(_clock.UtcNow);
         var endTo = today.AddMonths(Math.Max(1, _options.WindowMonths));
 
+        // Hygiene: awards whose recompete has long passed are dead weight; the
+        // radar never shows them (it filters end >= now) so drop them.
+        var pruneCutoff = _clock.UtcNow.AddDays(-90);
+        await _db.Awards
+            .Where(a => a.PeriodOfPerformanceEnd != null && a.PeriodOfPerformanceEnd < pruneCutoff)
+            .ExecuteDeleteAsync(ct);
+
         var touched = 0;
         foreach (var code in codes)
         {
-            IReadOnlyList<AwardRecord> records;
             try
             {
-                records = await _client.FetchExpiringAwardsAsync(code, today, endTo, ct);
+                var records = await _client.FetchExpiringAwardsAsync(code, today, endTo, ct);
+                touched += await UpsertAsync(records, ct);
             }
             catch (OperationCanceledException)
             {
@@ -78,13 +85,13 @@ public sealed class AwardIngestService : IAwardIngestService
             }
             catch (Exception ex)
             {
-                // One code's failure (rate limit, transient outage) must not
-                // sink the rest — awards refresh again tomorrow.
-                _log.LogWarning(ex, "Award fetch failed for NAICS {Code}; continuing", code);
-                continue;
+                // One code's failure (rate limit, outage, or a unique-key race
+                // with an ingest running in the other process) must not sink
+                // the rest — and a failed SaveChanges must not leave poisoned
+                // entities in the tracker for the next code's save.
+                _db.ClearChangeTracker();
+                _log.LogWarning(ex, "Award ingest failed for NAICS {Code}; continuing with remaining codes", code);
             }
-
-            touched += await UpsertAsync(records, ct);
         }
 
         if (touched > 0)

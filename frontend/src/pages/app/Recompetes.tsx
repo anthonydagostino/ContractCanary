@@ -11,7 +11,7 @@ export function Recompetes() {
   const { me } = useAuth()
   const [page, setPage] = useState(1)
   const entitled = !!me?.limits.canSeeRecompetes
-  const { data, isLoading } = useRecompetes(page, entitled)
+  const { data, isLoading, isError, refetch } = useRecompetes(page, entitled)
 
   return (
     <div>
@@ -24,6 +24,14 @@ export function Recompetes() {
         <UpsellCard />
       ) : isLoading ? (
         <PageLoader />
+      ) : isError ? (
+        // A transient failure must not masquerade as "no matches" (bug class
+        // previously found on the opportunity page).
+        <EmptyState
+          title="Couldn't load recompete data"
+          hint="A network or server error occurred — your matches are still there."
+          action={<button type="button" className="btn-secondary" onClick={() => refetch()}>Try again</button>}
+        />
       ) : !data || data.items.length === 0 ? (
         <EmptyState
           title="No expiring incumbent contracts match your profiles yet"

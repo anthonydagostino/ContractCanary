@@ -92,6 +92,76 @@ public class RecompeteRadarTests : ApiTestBase
     }
 
     [Fact]
+    public async Task One_failing_code_does_not_sink_the_rest_of_the_ingest()
+    {
+        // Also exercises the poisoned-tracker recovery: the failure path must
+        // clear the change tracker so the next code's save isn't corrupted.
+        var (_, _, userId) = await RegisterAndLoginAsync($"rrflaky_{Guid.NewGuid():N}@test.dev");
+        await SeedProfileAsync(userId, "Mixed", "999999", "541511"); // 999999 throws in the stub
+
+        using var factory = Factory.WithWebHostBuilder(b =>
+            b.ConfigureServices(s => s.AddSingleton<IAwardsClient, FlakyAwardsClient>()));
+        using var scope = factory.Services.CreateScope();
+        var ingest = scope.ServiceProvider.GetRequiredService<IAwardIngestService>();
+
+        var touched = await ingest.RunAsync();
+
+        touched.Should().BeGreaterThan(0, "the healthy code must still ingest after the failing one");
+    }
+
+    private sealed class FlakyAwardsClient : IAwardsClient
+    {
+        public string Source => "Flaky";
+
+        public Task<IReadOnlyList<AwardRecord>> FetchExpiringAwardsAsync(
+            string naicsCode, DateOnly endFrom, DateOnly endTo, CancellationToken ct = default)
+        {
+            if (naicsCode == "999999") throw new HttpRequestException("simulated outage");
+            IReadOnlyList<AwardRecord> ok = new List<AwardRecord>
+            {
+                new(AwardKey: $"FLAKY_{naicsCode}", DisplayId: "F-1", RecipientName: "Recipient",
+                    RecipientUei: null, AwardingAgency: "Agency", NaicsCode: naicsCode,
+                    PscCode: null, ObligatedAmount: 1000m, PotentialTotalValue: null,
+                    PeriodOfPerformanceStart: DateTime.UtcNow.AddYears(-4),
+                    PeriodOfPerformanceEnd: DateTime.UtcNow.AddMonths(6),
+                    PopState: null, RawJson: "{}"),
+            };
+            return Task.FromResult(ok);
+        }
+    }
+
+    [Fact]
+    public async Task Long_expired_awards_are_pruned_on_ingest()
+    {
+        var (_, _, userId) = await RegisterAndLoginAsync($"rrprune_{Guid.NewGuid():N}@test.dev");
+        await SeedProfileAsync(userId, "IT", "541511");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Awards.Add(new Award
+            {
+                AwardId = "STALE_AWARD_1",
+                RecipientName = "Old Incumbent",
+                NaicsCode = "541511",
+                PeriodOfPerformanceEnd = DateTime.UtcNow.AddDays(-120),
+                RawJson = "{}",
+                IngestedAt = DateTime.UtcNow.AddDays(-200),
+            });
+            await db.SaveChangesAsync();
+        }
+
+        await RunAwardIngestAsync();
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.Awards.AnyAsync(a => a.AwardId == "STALE_AWARD_1"))
+                .Should().BeFalse("awards long past their recompete are dead weight");
+        }
+    }
+
+    [Fact]
     public async Task Users_with_no_profiles_get_an_empty_page_not_an_error()
     {
         var (client, _, userId) = await RegisterAndLoginAsync($"rrempty_{Guid.NewGuid():N}@test.dev");

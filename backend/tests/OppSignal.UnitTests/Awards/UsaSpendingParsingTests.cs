@@ -94,6 +94,30 @@ public class UsaSpendingParsingTests
         r.RecipientName.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("2026-08-01")] // exactly endFrom
+    [InlineData("2027-12-31")] // exactly endTo
+    public void Window_boundaries_are_inclusive(string endDate)
+    {
+        var row = SampleRow.Replace("2026-11-30", endDate);
+        var root = Root($$"""{"results":[{{row}}]}""");
+        var (records, _, _) = UsaSpendingAwardsClient.ParsePage(
+            root, new DateOnly(2026, 8, 1), new DateOnly(2027, 12, 31));
+
+        records.Should().ContainSingle("an award ending exactly on a window edge is still a recompete");
+    }
+
+    [Fact]
+    public void Amounts_with_thousands_separators_parse()
+    {
+        var row = SampleRow.Replace("2145000.5", "\"2,145,000.50\"");
+        var root = Root($$"""{"results":[{{row}}]}""");
+        var (records, _, _) = UsaSpendingAwardsClient.ParsePage(
+            root, new DateOnly(2026, 8, 1), new DateOnly(2027, 12, 31));
+
+        records.Should().ContainSingle().Which.ObligatedAmount.Should().Be(2_145_000.50m);
+    }
+
     [Fact]
     public void Rows_without_a_key_or_end_date_are_skipped_and_odd_payloads_do_not_throw()
     {

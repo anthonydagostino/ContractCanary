@@ -22,8 +22,13 @@ public class AwardsOptions
     /// <summary>Rows per API page (USAspending max is 100).</summary>
     public int PageSize { get; set; } = 100;
 
-    /// <summary>Safety cap on pages fetched per NAICS code per run.</summary>
-    public int MaxPagesPerCode { get; set; } = 10;
+    /// <summary>
+    /// Safety cap on pages fetched per NAICS code per run. Results are sorted
+    /// by End Date descending, so far-future awards (multi-year IDIQs) are
+    /// paged through before the expiry window is reached — popular codes need
+    /// headroom or they starve before yielding a single in-window award.
+    /// </summary>
+    public int MaxPagesPerCode { get; set; } = 20;
 
     /// <summary>Ingest cadence. Award data changes slowly; daily is plenty.</summary>
     public int IntervalMinutes { get; set; } = 1440;
