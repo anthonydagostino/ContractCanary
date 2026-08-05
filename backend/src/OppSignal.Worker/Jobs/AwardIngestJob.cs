@@ -19,7 +19,8 @@ public sealed class AwardIngestJob : IJob
     public async Task Execute(IJobExecutionContext context)
     {
         _log.LogInformation("AwardIngestJob starting");
-        var touched = await _awards.RunAsync(context.CancellationToken);
-        _log.LogInformation("AwardIngestJob done: {Count} awards inserted/updated", touched);
+        var result = await _awards.RunAsync(context.CancellationToken);
+        _log.LogInformation("AwardIngestJob done: {Count} awards inserted/updated, {Codes} codes ({Failed} failed)",
+            result.AwardsUpserted, result.CodesProcessed, result.CodesFailed);
     }
 }

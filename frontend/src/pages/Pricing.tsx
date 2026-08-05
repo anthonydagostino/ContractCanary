@@ -52,8 +52,20 @@ export function Pricing() {
           </div>
         )}
 
-        <p className="mt-10 text-center text-sm text-slate-500">
-          Prices in USD. Billing is handled securely by Stripe. Data comes from the free public SAM.gov API.
+        <div className="mx-auto mt-10 max-w-2xl rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-600">
+          <p>
+            <span className="font-semibold text-ink-900">Which plan?</span>{' '}
+            <span className="font-medium text-ink-900">Starter</span> fits one line of business — one match
+            profile, one clean daily digest. <span className="font-medium text-ink-900">Pro</span> is for
+            contractors serious about pipeline: 5 profiles, CSV export, priority ingest, and{' '}
+            <span className="font-medium text-ink-900">Recompete Radar</span> — expiring incumbent contracts in
+            your NAICS codes from public award data, so you see likely rebids months before they're posted.
+          </p>
+        </div>
+
+        <p className="mt-8 text-center text-sm text-slate-500">
+          Prices in USD. Plans renew monthly until canceled — cancel anytime from Settings, no annual lock-in.
+          Billing is handled securely by Stripe. Data comes from free public government sources (SAM.gov, USAspending.gov).
         </p>
       </section>
     </MarketingLayout>

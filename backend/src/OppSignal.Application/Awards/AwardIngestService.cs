@@ -6,14 +6,16 @@ using OppSignal.Domain.Entities;
 
 namespace OppSignal.Application.Awards;
 
+/// <summary>Outcome of one award-ingest run, so ops can tell "nothing to do" from "everything failed".</summary>
+public sealed record AwardIngestResult(int AwardsUpserted, int CodesProcessed, int CodesFailed);
+
 public interface IAwardIngestService
 {
     /// <summary>
     /// Pull expiring prime awards for every NAICS code used by an active match
-    /// profile and upsert them into the Award table. Idempotent. Returns the
-    /// number of awards inserted or updated.
+    /// profile and upsert them into the Award table. Idempotent.
     /// </summary>
-    Task<int> RunAsync(CancellationToken ct = default);
+    Task<AwardIngestResult> RunAsync(CancellationToken ct = default);
 }
 
 /// <summary>
@@ -44,12 +46,13 @@ public sealed class AwardIngestService : IAwardIngestService
         _log = log;
     }
 
-    public async Task<int> RunAsync(CancellationToken ct = default)
+    public async Task<AwardIngestResult> RunAsync(CancellationToken ct = default)
     {
-        if (!_options.Enabled) return 0;
+        if (!_options.Enabled) return new AwardIngestResult(0, 0, 0);
 
         // Every NAICS code any active profile watches (codes may be 2–6 digit
-        // prefixes; the client/source resolves them hierarchically).
+        // prefixes; the client/source resolves them hierarchically). Non-digit
+        // garbage would just burn a guaranteed-failing API call per day.
         var codes = (await _db.MatchProfiles.AsNoTracking()
                 .Where(p => p.IsActive)
                 .Select(p => p.Naics)
@@ -57,9 +60,10 @@ public sealed class AwardIngestService : IAwardIngestService
             .SelectMany(list => list)
             .Where(c => !string.IsNullOrWhiteSpace(c))
             .Select(c => c.Trim())
+            .Where(c => c.Length is >= 2 and <= 6 && c.All(char.IsAsciiDigit))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        if (codes.Count == 0) return 0;
+        if (codes.Count == 0) return new AwardIngestResult(0, 0, 0);
 
         var today = DateOnly.FromDateTime(_clock.UtcNow);
         var endTo = today.AddMonths(Math.Max(1, _options.WindowMonths));
@@ -72,6 +76,7 @@ public sealed class AwardIngestService : IAwardIngestService
             .ExecuteDeleteAsync(ct);
 
         var touched = 0;
+        var failed = 0;
         foreach (var code in codes)
         {
             try
@@ -90,14 +95,14 @@ public sealed class AwardIngestService : IAwardIngestService
                 // the rest — and a failed SaveChanges must not leave poisoned
                 // entities in the tracker for the next code's save.
                 _db.ClearChangeTracker();
+                failed++;
                 _log.LogWarning(ex, "Award ingest failed for NAICS {Code}; continuing with remaining codes", code);
             }
         }
 
-        if (touched > 0)
-            _log.LogInformation("Award ingest ({Source}): {Count} awards inserted/updated across {Codes} NAICS codes",
-                _client.Source, touched, codes.Count);
-        return touched;
+        _log.LogInformation("Award ingest ({Source}): {Count} awards inserted/updated across {Codes} NAICS codes ({Failed} failed)",
+            _client.Source, touched, codes.Count, failed);
+        return new AwardIngestResult(touched, codes.Count, failed);
     }
 
     private async Task<int> UpsertAsync(IReadOnlyList<AwardRecord> records, CancellationToken ct)
@@ -115,6 +120,14 @@ public sealed class AwardIngestService : IAwardIngestService
         foreach (var r in records)
         {
             if (string.IsNullOrWhiteSpace(r.AwardKey) || !seen.Add(r.AwardKey)) continue;
+            if (r.AwardKey.Length > 128)
+            {
+                // Longer than the key column: skipping one record beats a
+                // DbUpdateException that rolls back the whole batch — and would
+                // recur every run, permanently starving this code.
+                _log.LogWarning("Skipping award with oversize key ({Length} chars): {Key}", r.AwardKey.Length, r.AwardKey[..40]);
+                continue;
+            }
 
             if (!existing.TryGetValue(r.AwardKey, out var row))
             {
@@ -133,7 +146,10 @@ public sealed class AwardIngestService : IAwardIngestService
             row.PeriodOfPerformanceStart = Utc(r.PeriodOfPerformanceStart);
             row.PeriodOfPerformanceEnd = Utc(r.PeriodOfPerformanceEnd);
             row.PopState = r.PopState;
-            row.RawJson = string.IsNullOrWhiteSpace(r.RawJson) ? "{}" : r.RawJson;
+            // Postgres jsonb rejects NUL (\\u0000) escapes; strip them rather than let
+            // one odd payload roll back the batch.
+            var raw = string.IsNullOrWhiteSpace(r.RawJson) ? "{}" : r.RawJson;
+            row.RawJson = raw.Contains("\\u0000", StringComparison.Ordinal) ? raw.Replace("\\u0000", "", StringComparison.Ordinal) : raw;
             row.IngestedAt = now;
             touched++;
         }

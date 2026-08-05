@@ -43,11 +43,17 @@ public sealed class UsaSpendingAwardsClient : IAwardsClient
     {
         var results = new List<AwardRecord>();
         var pageSize = Math.Clamp(_options.PageSize, 1, 100);
-        var maxPages = Math.Max(1, _options.MaxPagesPerCode);
+        var maxPreamblePages = Math.Max(1, _options.MaxPagesPerCode);
+        var maxWindowPages = Math.Max(1, _options.MaxWindowPagesPerCode);
         var url = $"{_options.BaseUrl.TrimEnd('/')}/api/v2/search/spending_by_award/";
-        var reachedWindow = false;
-        var exhaustedCap = false;
 
+        // Two paging phases, because descending End Date order serves far-future
+        // awards first: the "preamble" (rows beyond endTo) and the window
+        // itself. Each gets its own cap — and crucially, the deepest window
+        // pages hold the SOONEST-expiring awards, so mid-window truncation
+        // would silently drop the most urgent recompetes. Keep it rare & loud.
+        var windowPages = 0;
+        var reachedWindow = false;
         for (var page = 1; ; page++)
         {
             var body = BuildRequestBody(naicsCode, endTo, pageSize, page);
@@ -60,17 +66,27 @@ public sealed class UsaSpendingAwardsClient : IAwardsClient
             var (pageRecords, sawOlderThanWindow, rowCount) = ParsePage(doc.RootElement, endFrom, endTo);
             results.AddRange(pageRecords);
             if (pageRecords.Count > 0 || sawOlderThanWindow) reachedWindow = true;
+            if (reachedWindow) windowPages++;
 
-            // Sorted by End Date descending: once rows end before the window
-            // starts, every later page is older still.
+            // Once rows end before the window starts, every later page is older still.
             if (sawOlderThanWindow || rowCount < pageSize) break;
-            if (page >= maxPages) { exhaustedCap = true; break; }
-        }
 
-        if (exhaustedCap && !reachedWindow)
-            _log.LogWarning(
-                "USAspending: NAICS {Code} exhausted {Pages} pages of far-future awards without reaching the expiry window — raise Awards:MaxPagesPerCode to surface this code's recompetes",
-                naicsCode, maxPages);
+            if (!reachedWindow && page >= maxPreamblePages)
+            {
+                _log.LogWarning(
+                    "USAspending: NAICS {Code} exhausted {Pages} pages of far-future awards without reaching the expiry window — raise Awards:MaxPagesPerCode to surface this code's recompetes",
+                    naicsCode, maxPreamblePages);
+                break;
+            }
+
+            if (reachedWindow && windowPages >= maxWindowPages)
+            {
+                _log.LogWarning(
+                    "USAspending: NAICS {Code} truncated mid-window after {Pages} in-window pages — the SOONEST-expiring awards are on the unfetched pages; raise Awards:MaxWindowPagesPerCode",
+                    naicsCode, maxWindowPages);
+                break;
+            }
+        }
 
         return results;
     }

@@ -45,7 +45,6 @@ const features: { icon: (p: IconProps) => ReactNode; title: string; body: string
   { icon: Icon.Mail, title: 'One daily digest', body: 'Grouped by match profile, in your timezone. Zero-match days send nothing at all. Signal, not noise.' },
   { icon: Icon.Shield, title: 'Never see it twice', body: 'Every opportunity is deduplicated per profile, so you are never pinged about the same notice again.' },
   { icon: Icon.Clock, title: 'Deadline tracker', body: 'Star the opportunities you are pursuing and track response deadlines so nothing slips through.' },
-  { icon: Icon.Radar, title: 'Recompete Radar', body: 'See incumbent contracts in your codes that expire soon — who holds the work, what it’s worth, and when the rebid is likely, from public award data. (Pro plan.)' },
   { icon: Icon.Download, title: 'CSV export', body: 'Export any filtered search to CSV and hand it straight to your capture team. (Pro plan.)' },
   { icon: Icon.Briefcase, title: 'Built for small business', body: 'The parts of a five-figure market-intelligence suite that a small contractor actually needs — and nothing you don’t.' },
 ]
@@ -55,6 +54,7 @@ const comparison: { label: string; canary: string; suites: string; diy: string }
   { label: 'Setup', canary: 'A few minutes', suites: 'Sales calls + onboarding', diy: 'None' },
   { label: 'Built for', canary: 'Small contractors', suites: 'Large capture teams', diy: '—' },
   { label: 'Daily matched digest', canary: 'yes', suites: 'yes', diy: 'no' },
+  { label: 'Expiring incumbent contracts (Recompete Radar)', canary: 'yes', suites: 'yes', diy: 'no' },
   { label: 'Plain-English AI summaries', canary: 'yes', suites: 'varies', diy: 'no' },
   { label: 'Long-term contract required', canary: 'no', suites: 'often', diy: 'no' },
 ]
@@ -67,6 +67,10 @@ const faqs: { q: string; a: string }[] = [
   {
     q: 'How is this different from just checking SAM.gov myself?',
     a: 'SAM.gov posts thousands of new notices across the whole government. We filter that firehose down to only the opportunities that match your NAICS codes, keywords, agencies, and set-asides, and email them to you once a day — so you stop searching and start seeing only what fits.',
+  },
+  {
+    q: 'How can you show opportunities before they appear on SAM.gov?',
+    a: 'Most federal work is rebid when the current contract ends, and every award — who holds it, what it’s worth, when it expires — is public on USAspending.gov. Recompete Radar (Pro) watches that data for contracts in your NAICS codes expiring within 18 months, so you can position yourself months before the solicitation is ever posted.',
   },
   {
     q: 'Do I need to be technical to use it?',
@@ -85,6 +89,41 @@ const faqs: { q: string; a: string }[] = [
     a: 'We send nothing. Zero-match days produce no email. The whole point is signal, not noise.',
   },
 ]
+
+/* ---------- realistic product preview: Recompete Radar ---------- */
+function RecompetePreview() {
+  const rows = [
+    { recipient: 'Ironclad Solutions Inc', agency: 'Dept. of the Army', value: '$2.1M', ends: 'Mar 2027', naics: '541511', open: false },
+    { recipient: 'Summit Federal Services LLC', agency: 'Veterans Affairs', value: '$860K', ends: 'Nov 2026', naics: '561730', open: true },
+  ]
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-lift">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+        <p className="text-sm font-semibold text-ink-900">Recompete Radar</p>
+        <span className="badge bg-indigo-100 text-indigo-700">Pro</span>
+      </div>
+      <ul className="divide-y divide-slate-100">
+        {rows.map((r) => (
+          <li key={r.recipient} className="px-5 py-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-ink-900">{r.recipient}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{r.agency}</p>
+              </div>
+              <p className="text-sm font-bold tabular-nums text-ink-900">{r.value}</p>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {r.open
+                ? <span className="badge bg-red-50 text-red-700">Recompete window likely open</span>
+                : <span className="badge bg-amber-50 text-amber-800">Ends {r.ends}</span>}
+              <span className="badge bg-slate-100 text-slate-600">NAICS {r.naics}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 /* ---------- realistic product preview: a daily digest ---------- */
 function DigestPreview() {
@@ -213,7 +252,29 @@ export function Landing() {
             <span className="eyebrow">Features</span>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-ink-900">Everything you need to find and track the right bids</h2>
           </div>
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Spotlight: the one capability the five-figure suites are famous for */}
+          <div className="card mt-12 overflow-hidden p-0">
+            <div className="grid items-center gap-8 p-8 lg:grid-cols-2">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700">
+                  <Icon.Radar className="h-3.5 w-3.5" /> Recompete Radar · Pro
+                </span>
+                <h3 className="mt-4 text-2xl font-bold tracking-tight text-ink-900">See tomorrow's bids before they're posted</h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                  Most federal work is rebid when the current contract ends — and every award is public record.
+                  Recompete Radar watches USAspending.gov for incumbent contracts in your NAICS codes that expire
+                  in the next 18 months: who holds the work, what it's worth, and when the rebid window likely
+                  opens. Position yourself months before the RFP exists.
+                </p>
+                <p className="mt-3 text-xs text-slate-500">
+                  The capability five-figure market-intelligence suites are best known for — included in Pro.
+                </p>
+              </div>
+              <RecompetePreview />
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
               <div key={f.title} className="card p-6 transition hover:-translate-y-0.5 hover:shadow-lift">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-canary-100 text-canary-700">

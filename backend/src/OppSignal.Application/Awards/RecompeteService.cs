@@ -61,10 +61,10 @@ public static class RecompeteMath
 /// </summary>
 public sealed class RecompeteService : IRecompeteService
 {
-    // The awards table only ever holds codes users watch, so a bounded
-    // in-memory prefix match over the window is small and avoids untranslatable
-    // StartsWith-over-list SQL.
-    private const int ScanCap = 5000;
+    // Applied PER watched code (a constant StartsWith translates to LIKE), so
+    // one user's busy code can never crowd another user's awards out of a
+    // shared global scan.
+    private const int ScanCapPerCode = 2000;
 
     private readonly IAppDbContext _db;
     private readonly IClock _clock;
@@ -79,7 +79,9 @@ public sealed class RecompeteService : IRecompeteService
 
     public async Task<RecompetePage> ListAsync(Guid userId, int page, int pageSize, CancellationToken ct = default)
     {
-        page = Math.Max(1, page);
+        // Upper clamp keeps (page-1)*pageSize far from int overflow, where a
+        // wrapped-negative Skip would relabel page 1 as the requested page.
+        page = Math.Clamp(page, 1, 100_000);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
         var profiles = await _db.MatchProfiles.AsNoTracking()
@@ -94,17 +96,31 @@ public sealed class RecompeteService : IRecompeteService
         if (watched.Count == 0) return new RecompetePage { Page = page, TotalPages = 0 };
 
         var now = _clock.UtcNow;
+        // Calendar-day boundary: an award expiring later today is still a live
+        // recompete signal (PoP ends are stored as midnight UTC).
+        var windowFrom = now.Date;
         var endTo = now.AddMonths(Math.Max(1, _options.WindowMonths));
 
-        var candidates = await _db.Awards.AsNoTracking()
-            .Where(a => a.PeriodOfPerformanceEnd != null
-                && a.PeriodOfPerformanceEnd >= now
-                && a.PeriodOfPerformanceEnd <= endTo
-                && a.NaicsCode != null)
+        var byId = new Dictionary<string, Domain.Entities.Award>(StringComparer.Ordinal);
+        foreach (var code in watched.Select(w => w.Code).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var rows = await _db.Awards.AsNoTracking()
+                .Where(a => a.PeriodOfPerformanceEnd != null
+                    && a.PeriodOfPerformanceEnd >= windowFrom
+                    && a.PeriodOfPerformanceEnd <= endTo
+                    && a.NaicsCode != null
+                    && a.NaicsCode.StartsWith(code))
+                .OrderBy(a => a.PeriodOfPerformanceEnd)
+                .ThenBy(a => a.AwardId)
+                .Take(ScanCapPerCode)
+                .ToListAsync(ct);
+            foreach (var a in rows) byId[a.AwardId] = a;
+        }
+
+        var candidates = byId.Values
             .OrderBy(a => a.PeriodOfPerformanceEnd)
-            .ThenBy(a => a.AwardId)
-            .Take(ScanCap)
-            .ToListAsync(ct);
+            .ThenBy(a => a.AwardId, StringComparer.Ordinal)
+            .ToList();
 
         var matched = candidates
             .Select(a => new

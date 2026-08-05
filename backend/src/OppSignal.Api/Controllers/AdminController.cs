@@ -42,8 +42,10 @@ public sealed class AdminController : ControllerBase
     [HttpPost("awards/ingest")]
     public async Task<IActionResult> RunAwardIngest(CancellationToken ct)
     {
-        var touched = await _awards.RunAsync(ct);
-        return Ok(new { awardsUpserted = touched });
+        var result = await _awards.RunAsync(ct);
+        // Surface partial/total failure — "0 upserted" alone can't distinguish
+        // "nothing to do" from "every code failed".
+        return Ok(new { result.AwardsUpserted, result.CodesProcessed, result.CodesFailed });
     }
 
     /// <summary>Send the calling admin their own digest now (demo/testing).</summary>

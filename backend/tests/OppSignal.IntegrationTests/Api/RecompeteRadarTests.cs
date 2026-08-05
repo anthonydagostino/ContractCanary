@@ -16,7 +16,7 @@ public class RecompeteRadarTests : ApiTestBase
 {
     public RecompeteRadarTests(OppSignalWebAppFactory factory) : base(factory) { }
 
-    private async Task<int> RunAwardIngestAsync()
+    private async Task<AwardIngestResult> RunAwardIngestAsync()
     {
         using var scope = Factory.Services.CreateScope();
         var ingest = scope.ServiceProvider.GetRequiredService<IAwardIngestService>();
@@ -58,7 +58,7 @@ public class RecompeteRadarTests : ApiTestBase
         // Watch a 4-digit prefix: fixture awards carry 6-digit leaves under it.
         await SeedProfileAsync(userId, "IT Services", "5415");
 
-        (await RunAwardIngestAsync()).Should().BeGreaterThan(0);
+        (await RunAwardIngestAsync()).AwardsUpserted.Should().BeGreaterThan(0);
 
         var page = await client.GetFromJsonAsync<RecompetePage>("/api/recompetes");
         page!.Items.Should().NotBeEmpty();
@@ -104,9 +104,10 @@ public class RecompeteRadarTests : ApiTestBase
         using var scope = factory.Services.CreateScope();
         var ingest = scope.ServiceProvider.GetRequiredService<IAwardIngestService>();
 
-        var touched = await ingest.RunAsync();
+        var result = await ingest.RunAsync();
 
-        touched.Should().BeGreaterThan(0, "the healthy code must still ingest after the failing one");
+        result.AwardsUpserted.Should().BeGreaterThan(0, "the healthy code must still ingest after the failing one");
+        result.CodesFailed.Should().Be(1, "the failing code is reported, not hidden");
     }
 
     private sealed class FlakyAwardsClient : IAwardsClient
@@ -128,6 +129,77 @@ public class RecompeteRadarTests : ApiTestBase
             };
             return Task.FromResult(ok);
         }
+    }
+
+    [Fact]
+    public async Task A_poison_record_is_skipped_without_rolling_back_the_batch()
+    {
+        // An oversize key would DbUpdateException the whole code's batch —
+        // and recur every run, permanently starving that code.
+        var (_, _, userId) = await RegisterAndLoginAsync($"rrpoison_{Guid.NewGuid():N}@test.dev");
+        await SeedProfileAsync(userId, "IT", "541511");
+
+        using var factory = Factory.WithWebHostBuilder(b =>
+            b.ConfigureServices(s => s.AddSingleton<IAwardsClient, MixedQualityAwardsClient>()));
+        using var scope = factory.Services.CreateScope();
+        var ingest = scope.ServiceProvider.GetRequiredService<IAwardIngestService>();
+
+        var result = await ingest.RunAsync();
+
+        result.AwardsUpserted.Should().Be(1, "the valid record persists; the poison one is skipped");
+        result.CodesFailed.Should().Be(0);
+    }
+
+    private sealed class MixedQualityAwardsClient : IAwardsClient
+    {
+        public string Source => "MixedQuality";
+
+        public Task<IReadOnlyList<AwardRecord>> FetchExpiringAwardsAsync(
+            string naicsCode, DateOnly endFrom, DateOnly endTo, CancellationToken ct = default)
+        {
+            AwardRecord Make(string key) => new(
+                AwardKey: key, DisplayId: "M-1", RecipientName: "Recipient", RecipientUei: null,
+                AwardingAgency: "Agency", NaicsCode: naicsCode, PscCode: null,
+                ObligatedAmount: 1000m, PotentialTotalValue: null,
+                PeriodOfPerformanceStart: DateTime.UtcNow.AddYears(-4),
+                PeriodOfPerformanceEnd: DateTime.UtcNow.AddMonths(6),
+                PopState: null, RawJson: "{\"note\":\"contains \\u0000 escape\"}");
+
+            IReadOnlyList<AwardRecord> records = new List<AwardRecord>
+            {
+                Make(new string('K', 200)), // oversize key → must be skipped
+                Make($"GOOD_{naicsCode}"),
+            };
+            return Task.FromResult(records);
+        }
+    }
+
+    [Fact]
+    public async Task An_award_expiring_today_is_still_on_the_radar()
+    {
+        // PoP ends are stored as midnight UTC; a strict >= now comparison
+        // dropped an award expiring today for the whole day.
+        var (client, _, userId) = await RegisterAndLoginAsync($"rrtoday_{Guid.NewGuid():N}@test.dev");
+        await SetPlanAsync(userId, PlanTier.Pro);
+        await SeedProfileAsync(userId, "IT", "541511");
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Awards.Add(new Award
+            {
+                AwardId = "ENDS_TODAY_1",
+                RecipientName = "Last-Day Incumbent",
+                NaicsCode = "541511",
+                PeriodOfPerformanceEnd = DateTime.UtcNow.Date, // midnight UTC today
+                RawJson = "{}",
+                IngestedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var page = await client.GetFromJsonAsync<RecompetePage>("/api/recompetes");
+        page!.Items.Should().Contain(i => i.AwardId == "ENDS_TODAY_1");
     }
 
     [Fact]

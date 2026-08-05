@@ -64,9 +64,11 @@ public sealed class ProfileInputValidator : AbstractValidator<ProfileInput>
         RuleFor(x => x.Keywords).Must(l => l.Count <= 100).WithMessage("Too many keywords.");
         RuleFor(x => x.AgencyPaths).Must(l => l.Count <= 100).WithMessage("Too many agencies.");
         RuleFor(x => x.States).Must(l => l.Count <= 60).WithMessage("Too many states.");
-        // Per-element length caps so a huge string can't be stored/scanned (DoS).
-        RuleForEach(x => x.Naics).MaximumLength(20);
-        RuleForEach(x => x.Psc).MaximumLength(20);
+        // Real code formats only: NAICS is 2-6 digits, PSC is 1-4 alphanumerics.
+        // Garbage here isn't just noise — every stored code costs a daily
+        // USAspending query in the Recompete Radar ingest.
+        RuleForEach(x => x.Naics).Matches("^[0-9]{2,6}$").WithMessage("NAICS codes are 2-6 digits.");
+        RuleForEach(x => x.Psc).Matches("^[A-Za-z0-9]{1,6}$").WithMessage("PSC codes are 1-6 letters/digits.");
         RuleForEach(x => x.Keywords).MaximumLength(100);
         RuleForEach(x => x.AgencyPaths).MaximumLength(200);
         RuleForEach(x => x.States).Matches("^[A-Za-z]{2}$").WithMessage("States must be 2-letter codes.");

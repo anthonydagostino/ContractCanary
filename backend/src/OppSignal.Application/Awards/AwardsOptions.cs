@@ -23,12 +23,19 @@ public class AwardsOptions
     public int PageSize { get; set; } = 100;
 
     /// <summary>
-    /// Safety cap on pages fetched per NAICS code per run. Results are sorted
-    /// by End Date descending, so far-future awards (multi-year IDIQs) are
-    /// paged through before the expiry window is reached — popular codes need
-    /// headroom or they starve before yielding a single in-window award.
+    /// Safety cap on pages fetched per NAICS code BEFORE the expiry window is
+    /// reached. Results sort by End Date descending, so far-future awards are
+    /// paged through first — popular codes need headroom or they starve before
+    /// yielding a single in-window award.
     /// </summary>
-    public int MaxPagesPerCode { get; set; } = 20;
+    public int MaxPagesPerCode { get; set; } = 60;
+
+    /// <summary>
+    /// Separate cap on pages fetched INSIDE the expiry window. In descending
+    /// order the deepest pages hold the soonest-expiring awards — the most
+    /// urgent ones — so truncating mid-window must be rare and loud.
+    /// </summary>
+    public int MaxWindowPagesPerCode { get; set; } = 50;
 
     /// <summary>Ingest cadence. Award data changes slowly; daily is plenty.</summary>
     public int IntervalMinutes { get; set; } = 1440;
