@@ -49,9 +49,9 @@ public sealed class StripeBillingService : IBillingService
         var customerId = await EnsureCustomerAsync(sub, user.Email!, user.FullName, ct);
 
         // Trials are granted once, at registration. A checkout during the active
-        // trial carries the REMAINING trial days into Stripe; after the trial has
-        // been consumed (expired, or a lapsed subscriber returning) checkout must
-        // not mint another free trial, and payment details are then required.
+        // trial carries the REMAINING trial days into Stripe ($0 due today, first
+        // charge at trial end); after the trial has been consumed (expired, or a
+        // lapsed subscriber returning) checkout must not mint another free trial.
         // Stripe Checkout requires trial_end ≥ 48h out, so a nearly-done trial
         // simply converts to a paid subscription now.
         var now = _clock.UtcNow;
@@ -65,7 +65,12 @@ public sealed class StripeBillingService : IBillingService
             Customer = customerId,
             ClientReferenceId = userId.ToString(),
             LineItems = new List<SessionLineItemOptions> { new() { Price = priceId, Quantity = 1 } },
-            PaymentMethodCollection = activeTrialEnd is null ? "always" : "if_required",
+            // Card is captured at subscribe time even mid-trial: a user clicking
+            // Subscribe has decided to pay, and asking them to return after the
+            // trial to "subscribe again" loses conversions. Checkout displays
+            // "$0 due today, then $X/mo starting <trial end>". Registration
+            // stays card-free — the trial itself never requires a card.
+            PaymentMethodCollection = "always",
             SubscriptionData = new SessionSubscriptionDataOptions
             {
                 TrialEnd = activeTrialEnd,
