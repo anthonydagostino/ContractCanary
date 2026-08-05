@@ -122,6 +122,9 @@ automatic backups (~$15/mo, see the backups item below).
 Email Routing (30 seconds, same screen as support@), and turn on AI summaries
 (`AI_ENABLED=true` + an Anthropic key — see the AI part below).
 
+**When you're ready to go get users:** the complete plan — channels, costs,
+phases, and what to ask engineering for — lives in **GROWTH_STRATEGY.md**.
+
 ---
 
 ## Feature status — what's built, and what each needs
