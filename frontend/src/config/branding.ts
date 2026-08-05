@@ -10,10 +10,11 @@ export const branding = {
   description:
     'ContractCanary turns free public procurement data into a daily, personalized signal that helps small government contractors find and organize relevant opportunities faster.',
   supportEmail: 'support@contract-canary.com',
-  // Legal/company info. Fill these in before launch (a lawyer should confirm the
-  // Terms details). CANARY: the postal address is required in commercial email footers.
-  companyLegalName: 'Contract Canary',
-  governingLawState: '', // e.g. 'Texas' — set before launch
+  // Legal/company info. Sole proprietorship operating under the product name;
+  // a lawyer should confirm the Terms details (the /terms and /privacy pages
+  // carry a pending-review banner until then).
+  companyLegalName: 'Anthony D’Agostino, doing business as ContractCanary',
+  governingLawState: 'New Jersey',
   // Marketing one-liners used on the landing page. Phrased as capability claims
   // (what the tool does), not outcome guarantees, to stay within FTC advertising rules.
   hero: {

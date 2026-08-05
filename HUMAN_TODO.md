@@ -99,19 +99,24 @@ automatic backups (~$15/mo, see the backups item below).
    and `EMAIL_PROVIDER=Postmark` in `.env`, put the **digest on a "Broadcast" message
    stream** (verification/receipts on Transactional), redeploy, and send yourself a
    test digest. (Part 5 + item 4 in the compliance section below.)
-3. **Stripe** (Part 4): create products/prices, set the keys + webhook secret in
-   `.env`, and in the Stripe Dashboard set the **statement descriptor**
-   (`CONTRACTCANARY`), turn on **email receipts**, and enable **cancel subscription**
-   in the Customer Portal.
-4. **Company/legal details:** in `frontend/src/config/branding.ts` set
-   `companyLegalName` and `governingLawState` (tell engineering the state and it's a
-   one-line change + rebuild if you'd rather not touch code).
+3. **Stripe** (Part 4): ✅ account activated, products created ($29/$79), webhook set,
+   keys in `.env`. **Remaining:** fix the checkout error currently under
+   investigation, turn on **email receipts** (Settings → Emails → "Successful
+   payments"), and confirm **cancel subscription** is allowed in the Customer Portal.
+4. ~~Company/legal details~~ ✅ Done — Terms/Privacy now name
+   "Anthony D'Agostino, doing business as ContractCanary", New Jersey governing law.
 5. **Lawyer pass** over `/terms` and `/privacy`, then remove the "pending legal
    review" banner (Part 12).
-6. **Backups + monitoring** (items 6–7 in the compliance section): nightly database
-   backup with one *tested* restore, plus Sentry + a free uptime monitor on `/health`.
-   Backups are the one existential item on this list — don't launch marketing pushes
-   without them.
+6. **Uptime monitor (~5 min, free).** uptimerobot.com → create free account →
+   Add monitor → HTTP(s) → `https://contract-canary.com/health` → 5-minute interval.
+   Emails you the moment the site stops responding.
+7. **Server backups (~2 min, ~$1–2/mo).** DigitalOcean panel → your droplet →
+   **Backups** tab → Enable backups (weekly snapshots). This is the minimum safety
+   net — the database lives on that box. Backups are the one existential item on
+   this list — don't launch marketing pushes without them. Once there are paying
+   customers, upgrade to a managed Postgres (daily backups + point-in-time restore,
+   ~$15/mo; the app already supports an external database) and do one *tested*
+   restore.
 
 *Optional while you wait on Postmark/Stripe:* add a `privacy@` forward in Cloudflare
 Email Routing (30 seconds, same screen as support@), and turn on AI summaries
