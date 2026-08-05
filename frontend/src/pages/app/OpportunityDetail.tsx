@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNoticeDetail, useSimilarNotices, useToggleSaved } from '../../hooks/queries'
 import { Alert, Badge, PageLoader, EmptyState, StarButton } from '../../components/ui'
 import { deadlineLabel, formatDate, formatDateTime } from '../../lib/format'
+import { isEarlyStage } from '../../lib/types'
 import type { NoticeListItem } from '../../lib/types'
 
 export function OpportunityDetail() {
@@ -65,6 +66,7 @@ export function OpportunityDetail() {
           <div>
             <div className="mb-2 flex flex-wrap gap-2">
               <Badge tone="indigo">{n.typeLabel}</Badge>
+              {isEarlyStage(n.type) && <Badge tone="amber">Get in early</Badge>}
               {n.setAside !== 'None' && n.setAsideLabel && <Badge tone="green">{n.setAsideLabel}</Badge>}
               <Badge tone={dl.tone}>{dl.text}</Badge>
               {!n.isActive && <Badge tone="gray">Inactive</Badge>}
@@ -84,6 +86,15 @@ export function OpportunityDetail() {
               <button type="button" className="btn-ghost" onClick={() => setNoteOpen(false)}>Cancel</button>
             </div>
           </div>
+        )}
+
+        {isEarlyStage(n.type) && (
+          <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+            <span className="font-semibold">Pre-RFP notice — the requirement isn't final yet.</span>{' '}
+            The agency is doing market research. Responding now, even with a short capability statement,
+            can shape the final solicitation in your favor and puts you on the contracting officer's radar
+            before the real competition starts.
+          </p>
         )}
 
         {n.aiSummary && <AiOverview summary={n.aiSummary} keyPoints={n.aiKeyPoints} fitNote={n.aiFitNote} />}

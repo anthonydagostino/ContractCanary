@@ -41,6 +41,7 @@ public sealed class OppSignalWebAppFactory : WebApplicationFactory<Program>, IAs
         // configuration, which IS visible to those reads.
         builder.UseSetting("ConnectionStrings:Postgres", Db.ConnectionString);
         builder.UseSetting("Ingest:Source", "Fixture");
+        builder.UseSetting("Awards:Source", "Fixture");
         builder.UseSetting("Seed:Demo", "false");
         builder.UseSetting("RateLimit:AuthPermitLimit", "100000"); // don't throttle the test suite
         builder.UseSetting("Auth:RequireConfirmedEmail", "true");

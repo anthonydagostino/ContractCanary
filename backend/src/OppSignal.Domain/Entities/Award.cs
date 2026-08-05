@@ -1,15 +1,17 @@
 namespace OppSignal.Domain.Entities;
 
 /// <summary>
-/// v2 SEAM — intentionally empty in v1. This table exists so the future
-/// award-history / recompete-expiry intelligence (sourced from USAspending.gov)
-/// has a home with no schema migration surprise. Nothing ingests into it in v1;
-/// see <c>IAwardIngestionStub</c> for the documented no-op ingestion stub.
+/// A prime contract award from USAspending.gov, ingested for the Recompete
+/// Radar: awards whose period of performance ends soon are predicted rebids.
+/// Scope is limited to NAICS codes watched by active match profiles.
 /// </summary>
 public class Award
 {
-    /// <summary>USAspending award id (natural key).</summary>
+    /// <summary>USAspending generated_internal_id (natural key; used in deep links).</summary>
     public string AwardId { get; set; } = default!;
+
+    /// <summary>Human-readable award number (PIID) for display.</summary>
+    public string? DisplayAwardId { get; set; }
 
     public string? RecipientName { get; set; }
     public string? RecipientUei { get; set; }

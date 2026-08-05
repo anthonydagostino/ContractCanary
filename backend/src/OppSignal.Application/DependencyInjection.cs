@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using OppSignal.Application.Ai;
 using OppSignal.Application.Alerts;
+using OppSignal.Application.Awards;
 using OppSignal.Application.Billing;
 using OppSignal.Application.Ingest;
 using OppSignal.Application.Matching;
@@ -25,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<IReferenceService, ReferenceService>();
         services.AddScoped<ISummaryEnrichmentService, SummaryEnrichmentService>();
         services.AddScoped<IAlertService, AlertService>();
+        services.AddScoped<IAwardIngestService, AwardIngestService>();
+        services.AddScoped<IRecompeteService, RecompeteService>();
         return services;
     }
 }

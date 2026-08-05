@@ -4,7 +4,7 @@ using OppSignal.Domain.Enums;
 namespace OppSignal.Application.Billing;
 
 /// <summary>Feature limits for a plan tier.</summary>
-public sealed record PlanLimits(int MaxProfiles, bool CanExportCsv, bool CanPrioritize, bool DailyDigest);
+public sealed record PlanLimits(int MaxProfiles, bool CanExportCsv, bool CanPrioritize, bool DailyDigest, bool CanSeeRecompetes);
 
 /// <summary>
 /// THE single source of truth for plan entitlements. Pure and exhaustively tested.
@@ -18,9 +18,9 @@ public static class PlanPolicy
     /// <summary>Grace window after a payment failure during which access is retained.</summary>
     public static readonly TimeSpan PastDueGrace = TimeSpan.FromDays(7);
 
-    public static readonly PlanLimits None = new(MaxProfiles: 0, CanExportCsv: false, CanPrioritize: false, DailyDigest: false);
-    public static readonly PlanLimits Starter = new(MaxProfiles: 1, CanExportCsv: false, CanPrioritize: false, DailyDigest: true);
-    public static readonly PlanLimits Pro = new(MaxProfiles: 5, CanExportCsv: true, CanPrioritize: true, DailyDigest: true);
+    public static readonly PlanLimits None = new(MaxProfiles: 0, CanExportCsv: false, CanPrioritize: false, DailyDigest: false, CanSeeRecompetes: false);
+    public static readonly PlanLimits Starter = new(MaxProfiles: 1, CanExportCsv: false, CanPrioritize: false, DailyDigest: true, CanSeeRecompetes: false);
+    public static readonly PlanLimits Pro = new(MaxProfiles: 5, CanExportCsv: true, CanPrioritize: true, DailyDigest: true, CanSeeRecompetes: true);
 
     public static PlanLimits LimitsFor(PlanTier plan) => plan switch
     {

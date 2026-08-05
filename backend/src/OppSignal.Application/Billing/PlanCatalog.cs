@@ -31,6 +31,7 @@ public static class PlanCatalog
             "For teams tracking multiple lines of business.",
             new[]
             {
+                "Recompete Radar — expiring incumbent contracts before the rebid posts",
                 "5 match profiles",
                 "Daily digest email",
                 "Priority ingest of your saved searches",

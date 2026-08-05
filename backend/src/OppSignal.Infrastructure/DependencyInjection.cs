@@ -6,10 +6,12 @@ using OppSignal.Application.Abstractions;
 using OppSignal.Application.Admin;
 using OppSignal.Application.Ai;
 using OppSignal.Application.Auth;
+using OppSignal.Application.Awards;
 using OppSignal.Application.Common;
 using OppSignal.Application.Email;
 using OppSignal.Application.Ingest;
 using OppSignal.Infrastructure.Admin;
+using OppSignal.Infrastructure.Awards;
 using OppSignal.Infrastructure.Ai;
 using OppSignal.Infrastructure.Auth;
 using OppSignal.Infrastructure.Common;
@@ -33,6 +35,7 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
         services.Configure<AuthOptions>(config.GetSection(AuthOptions.SectionName));
         services.Configure<AiOptions>(config.GetSection(AiOptions.SectionName));
+        services.Configure<AwardsOptions>(config.GetSection(AwardsOptions.SectionName));
 
         // ---- Database ----
         var connectionString = config.GetConnectionString("Postgres")
@@ -83,6 +86,17 @@ public static class DependencyInjection
         else
         {
             services.AddSingleton<ISamOpportunitiesClient, FixtureOpportunitiesClient>();
+        }
+
+        // ---- Recompete Radar award source (USAspending live by default; Fixture for dev/tests) ----
+        var awardsSource = config[$"{AwardsOptions.SectionName}:Source"] ?? "UsaSpending";
+        if (string.Equals(awardsSource, "Fixture", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IAwardsClient, FixtureAwardsClient>();
+        }
+        else
+        {
+            services.AddHttpClient<IAwardsClient, UsaSpendingAwardsClient>();
         }
 
         // ---- Email transport (Dev default; Postmark when configured) ----

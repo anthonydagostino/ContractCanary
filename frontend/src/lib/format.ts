@@ -52,6 +52,16 @@ export function deadlineLabel(iso?: string | null, now: Date = new Date()): { te
   return { text: `${days} days left`, tone: 'green' }
 }
 
+/** Compact USD for contract values: $1.2M, $450K, $980. Null-safe. */
+export function formatMoney(amount?: number | null): string {
+  if (amount == null || isNaN(amount)) return '—'
+  const abs = Math.abs(amount)
+  if (abs >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`
+  if (abs >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  if (abs >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`
+  return `$${amount.toFixed(0)}`
+}
+
 /** Split a deadline label into the big-number tile used by the deadline tracker. */
 export function deadlineTile(text: string): { top: string; caption: string } {
   const m = /^(\d+) days? left$/.exec(text)

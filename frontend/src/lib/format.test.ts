@@ -3,7 +3,7 @@
 process.env.TZ = 'America/New_York'
 
 import { describe, expect, it } from 'vitest'
-import { daysUntil, deadlineLabel, deadlineTile, formatDate } from './format'
+import { daysUntil, deadlineLabel, deadlineTile, formatDate, formatMoney } from './format'
 
 describe('formatDate', () => {
   it('renders date-only values (midnight UTC) as the calendar date they name', () => {
@@ -78,6 +78,22 @@ describe('deadlineLabel (injected clock)', () => {
   it('has no deadline when undefined or malformed', () => {
     expect(deadlineLabel(undefined, now)).toEqual({ text: 'No deadline', tone: 'gray' })
     expect(deadlineLabel('garbage', now)).toEqual({ text: 'No deadline', tone: 'gray' })
+  })
+})
+
+describe('formatMoney', () => {
+  it('renders compact USD across magnitudes', () => {
+    expect(formatMoney(2_100_000)).toBe('$2.1M')
+    expect(formatMoney(5_000_000)).toBe('$5M')
+    expect(formatMoney(1_200_000_000)).toBe('$1.2B')
+    expect(formatMoney(450_000)).toBe('$450K')
+    expect(formatMoney(980)).toBe('$980')
+  })
+
+  it('is null-safe', () => {
+    expect(formatMoney(null)).toBe('—')
+    expect(formatMoney(undefined)).toBe('—')
+    expect(formatMoney(NaN)).toBe('—')
   })
 })
 

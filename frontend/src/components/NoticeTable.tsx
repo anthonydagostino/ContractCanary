@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { isEarlyStage } from '../lib/types'
 import type { NoticeListItem } from '../lib/types'
 import { Alert, Badge, StarButton } from './ui'
 import { deadlineLabel, formatDate } from '../lib/format'
@@ -47,6 +48,7 @@ export function NoticeTable({ items }: { items: NoticeListItem[] }) {
                 <td className="hidden px-3 py-3 md:table-cell">
                   <div className="flex flex-col gap-1">
                     <Badge tone="indigo">{n.typeLabel}</Badge>
+                    {isEarlyStage(n.type) && <Badge tone="amber">Get in early</Badge>}
                     {n.setAside !== 'None' && n.setAsideLabel && <Badge tone="green">{n.setAsideLabel}</Badge>}
                   </div>
                 </td>

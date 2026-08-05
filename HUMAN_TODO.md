@@ -133,6 +133,8 @@ add a key — exactly like the SAM and email switches — so they never risk the
 
 | Feature | Status | To switch on |
 |---|---|---|
+| **Recompete Radar (Pro)** — expiring incumbent contracts in your users' NAICS codes, from USAspending.gov's free public data, before the rebid posts on SAM.gov | ✅ Built & on | Nothing — no key needed. Data pulls daily (first pull ~90s after deploy). Admins can force a pull: the API endpoint `POST /api/admin/awards/ingest`. If the page stays empty after a day, check `docker compose logs worker` for "Award" lines |
+| "Get in early" badges on Sources Sought / Presolicitation notices | ✅ Built & on | — |
 | Opportunity search, match profiles, daily digest | ✅ Built & on | — (works now) |
 | Real SAM.gov data | ✅ Built & on | Already on (`INGEST_SOURCE=Sam`) |
 | Branded marketing site + FAQ + comparison + SEO | ✅ Built & on | — |

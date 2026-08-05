@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OppSignal.Api.Infrastructure;
 using OppSignal.Application.Admin;
+using OppSignal.Application.Awards;
 using OppSignal.Application.Ingest;
 using OppSignal.Infrastructure.Email;
 
@@ -15,12 +16,14 @@ public sealed class AdminController : ControllerBase
     private readonly IAdminMetricsService _metrics;
     private readonly IIngestService _ingest;
     private readonly IDigestService _digest;
+    private readonly IAwardIngestService _awards;
 
-    public AdminController(IAdminMetricsService metrics, IIngestService ingest, IDigestService digest)
+    public AdminController(IAdminMetricsService metrics, IIngestService ingest, IDigestService digest, IAwardIngestService awards)
     {
         _metrics = metrics;
         _ingest = ingest;
         _digest = digest;
+        _awards = awards;
     }
 
     [HttpGet("metrics")]
@@ -33,6 +36,14 @@ public sealed class AdminController : ControllerBase
     {
         var run = await _ingest.RunAsync(windowDays, ct);
         return Ok(new { run.Status, run.NoticesInserted, run.NoticesUpdated, run.MatchesCreated });
+    }
+
+    /// <summary>Manually trigger a Recompete Radar award pull (ops / demo).</summary>
+    [HttpPost("awards/ingest")]
+    public async Task<IActionResult> RunAwardIngest(CancellationToken ct)
+    {
+        var touched = await _awards.RunAsync(ct);
+        return Ok(new { awardsUpserted = touched });
     }
 
     /// <summary>Send the calling admin their own digest now (demo/testing).</summary>

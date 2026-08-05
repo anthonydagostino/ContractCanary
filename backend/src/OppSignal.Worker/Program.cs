@@ -1,5 +1,6 @@
 using OppSignal.Application;
 using OppSignal.Application.Ai;
+using OppSignal.Application.Awards;
 using OppSignal.Application.Ingest;
 using OppSignal.Infrastructure;
 using OppSignal.Worker;
@@ -33,6 +34,9 @@ try
     var aiEnabled = aiOptions.Enabled && !string.IsNullOrWhiteSpace(aiOptions.ApiKey);
     var aiIntervalMinutes = Math.Max(2, aiOptions.IntervalMinutes);
 
+    var awardsOptions = config.GetSection(AwardsOptions.SectionName).Get<AwardsOptions>() ?? new AwardsOptions();
+    var awardsIntervalMinutes = Math.Max(60, awardsOptions.IntervalMinutes);
+
     // Wait for the DB (API owns migrations/seed) before Quartz fires anything.
     builder.Services.AddHostedService<DatabaseReadyGate>();
 
@@ -55,6 +59,19 @@ try
             .WithIdentity("digest-trigger")
             // A missed hour must NOT double-fire (belt-and-suspenders on top of the per-user local-hour filter).
             .WithCronSchedule("0 0 * * * ?", x => x.WithMisfireHandlingInstructionDoNothing()));
+
+        // Recompete Radar: daily award pull from USAspending (or fixture).
+        if (awardsOptions.Enabled)
+        {
+            var awardsKey = new JobKey("award-ingest");
+            q.AddJob<AwardIngestJob>(o => o.WithIdentity(awardsKey));
+            q.AddTrigger(t => t
+                .ForJob(awardsKey)
+                .WithIdentity("award-ingest-trigger")
+                .StartAt(DateBuilder.FutureDate(90, IntervalUnit.Second)) // after first notice ingest settles
+                .WithSimpleSchedule(s => s.WithIntervalInMinutes(awardsIntervalMinutes).RepeatForever()
+                    .WithMisfireHandlingInstructionNextWithRemainingCount()));
+        }
 
         // AI enrichment only runs when a key is configured; otherwise it's absent entirely.
         if (aiEnabled)

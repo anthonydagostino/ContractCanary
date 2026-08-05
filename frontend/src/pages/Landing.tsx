@@ -29,6 +29,9 @@ const Icon = {
   Check: (p: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={p.className}><path d="M20 6 9 17l-5-5" /></svg>
   ),
+  Radar: (p: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={p.className}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /><path d="M12 3v2M21 12h-2" /></svg>
+  ),
 }
 
 const steps = [
@@ -42,6 +45,7 @@ const features: { icon: (p: IconProps) => ReactNode; title: string; body: string
   { icon: Icon.Mail, title: 'One daily digest', body: 'Grouped by match profile, in your timezone. Zero-match days send nothing at all. Signal, not noise.' },
   { icon: Icon.Shield, title: 'Never see it twice', body: 'Every opportunity is deduplicated per profile, so you are never pinged about the same notice again.' },
   { icon: Icon.Clock, title: 'Deadline tracker', body: 'Star the opportunities you are pursuing and track response deadlines so nothing slips through.' },
+  { icon: Icon.Radar, title: 'Recompete Radar', body: 'See incumbent contracts in your codes that expire soon — who holds the work, what it’s worth, and when the rebid is likely, from public award data. (Pro plan.)' },
   { icon: Icon.Download, title: 'CSV export', body: 'Export any filtered search to CSV and hand it straight to your capture team. (Pro plan.)' },
   { icon: Icon.Briefcase, title: 'Built for small business', body: 'The parts of a five-figure market-intelligence suite that a small contractor actually needs — and nothing you don’t.' },
 ]

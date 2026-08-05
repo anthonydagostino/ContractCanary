@@ -44,6 +44,9 @@ services:
       # Data source: Fixture (fake) by default; set INGEST_SOURCE=Sam + SAM_API_KEY for real data.
       Ingest__Source: "${INGEST_SOURCE:-Fixture}"
       Sam__ApiKey: "${SAM_API_KEY:-}"
+      # Recompete Radar award data (USAspending.gov, free, no key). AWARDS_SOURCE=Fixture for demo data.
+      Awards__Enabled: "${AWARDS_ENABLED:-true}"
+      Awards__Source: "${AWARDS_SOURCE:-UsaSpending}"
       # Email: Dev (writes to /app/maildrop) by default; set EMAIL_PROVIDER=Postmark + token to send.
       Email__Provider: "${EMAIL_PROVIDER:-Dev}"
       Email__DevDropPath: "/app/maildrop"
@@ -87,6 +90,8 @@ services:
       Ingest__Source: "${INGEST_SOURCE:-Fixture}"
       Ingest__IntervalMinutes: "${INGEST_INTERVAL_MINUTES:-180}"
       Sam__ApiKey: "${SAM_API_KEY:-}"
+      Awards__Enabled: "${AWARDS_ENABLED:-true}"
+      Awards__Source: "${AWARDS_SOURCE:-UsaSpending}"
       # AI opportunity summaries: off unless AI_ENABLED=true + ANTHROPIC_API_KEY are set.
       Ai__Enabled: "${AI_ENABLED:-false}"
       Ai__ApiKey: "${ANTHROPIC_API_KEY:-}"

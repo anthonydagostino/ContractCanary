@@ -4,7 +4,7 @@ import { noticeQueryString } from '../lib/noticeParams'
 import type {
   AdminMetrics, AgencyDto, Alert, AuthTokens, MatchProfile, Me, Meta, NaicsDto, NoticeDetail, NoticeListItem,
   NoticeQueryParams, NoticeTypeDto, PagedResult, PipelineStatus, ProfileInput, PscDto,
-  SavedNoticeItem, SetAsideDto, UserStats,
+  RecompetePage, SavedNoticeItem, SetAsideDto, UserStats,
 } from '../lib/types'
 
 export const queryClient = new QueryClient({
@@ -160,6 +160,15 @@ export const useNoticeTypes = () =>
     queryKey: ['ref-noticetypes'],
     queryFn: async () => (await api.get<NoticeTypeDto[]>('/reference/notice-types')).data,
     staleTime: Infinity,
+  })
+
+// ---- Recompete Radar (Pro) ----
+export const useRecompetes = (page: number, enabled: boolean) =>
+  useQuery({
+    queryKey: ['recompetes', page],
+    queryFn: async () => (await api.get<RecompetePage>(`/recompetes?page=${page}&pageSize=25`)).data,
+    enabled,
+    placeholderData: (prev) => prev,
   })
 
 // ---- Admin ----

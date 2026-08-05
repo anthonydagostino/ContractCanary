@@ -14,11 +14,43 @@ export type SetAsideCode =
   | 'Edwosb' | 'EdwosbSoleSource' | 'LocalArea' | 'IndianEconomicEnterprise'
   | 'IndianSmallBusinessEE' | 'BuyIndian' | 'VeteranOwned' | 'Other'
 
+/**
+ * Pre-RFP notice types: the agency is still doing market research, so a
+ * response can shape the final requirement — the earliest official signal.
+ */
+export const EARLY_STAGE_TYPES: NoticeType[] = ['SourcesSought', 'Presolicitation']
+export const isEarlyStage = (t: NoticeType) => EARLY_STAGE_TYPES.includes(t)
+
 export interface PlanLimits {
   maxProfiles: number
   canExportCsv: boolean
   canPrioritize: boolean
   dailyDigest: boolean
+  canSeeRecompetes: boolean
+}
+
+export interface RecompeteItem {
+  awardId: string
+  displayAwardId?: string | null
+  recipientName?: string | null
+  awardingAgency?: string | null
+  naicsCode?: string | null
+  pscCode?: string | null
+  obligatedAmount?: number | null
+  potentialTotalValue?: number | null
+  popState?: string | null
+  periodOfPerformanceEnd?: string | null
+  recompeteWindowOpens?: string | null
+  recompeteWindowOpen: boolean
+  matchedProfileNames: string[]
+  usaSpendingUrl: string
+}
+
+export interface RecompetePage {
+  items: RecompeteItem[]
+  total: number
+  page: number
+  totalPages: number
 }
 
 export interface Me {

@@ -16,6 +16,7 @@ import { ProfileEditor } from './pages/app/ProfileEditor'
 import { Saved } from './pages/app/Saved'
 import { Alerts } from './pages/app/Alerts'
 import { Deadlines } from './pages/app/Deadlines'
+import { Recompetes } from './pages/app/Recompetes'
 import { Settings } from './pages/app/Settings'
 import { Admin } from './pages/app/Admin'
 import { NotFound } from './pages/NotFound'
@@ -43,6 +44,7 @@ export function App() {
         <Route path="saved" element={<Saved />} />
         <Route path="alerts" element={<Alerts />} />
         <Route path="deadlines" element={<Deadlines />} />
+        <Route path="recompetes" element={<Recompetes />} />
         <Route path="settings" element={<Settings />} />
         <Route path="admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
       </Route>

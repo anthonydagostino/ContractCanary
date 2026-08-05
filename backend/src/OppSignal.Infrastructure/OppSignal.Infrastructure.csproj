@@ -33,4 +33,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="OppSignal.UnitTests" />
+    <InternalsVisibleTo Include="OppSignal.IntegrationTests" />
+  </ItemGroup>
+
 </Project>
