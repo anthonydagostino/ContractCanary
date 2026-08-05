@@ -42,6 +42,18 @@ describe('useSaveProfile cache invalidation', () => {
     expect(qc.getQueryState(['profile', 'p1'])?.isInvalidated).toBe(true)
     expect(qc.getQueryState(['profiles'])?.isInvalidated).toBe(true)
   })
+
+  it('invalidates recompetes, whose results derive from profile NAICS codes', async () => {
+    // Regression: the Recompetes empty state links to "Review my profiles";
+    // adding a code and returning within staleTime showed the stale empty page.
+    const { qc, wrapper } = setup()
+    qc.setQueryData(['recompetes', 1], { items: [], total: 0, page: 1, totalPages: 0 })
+
+    const { result } = renderHook(() => useSaveProfile(), { wrapper })
+    await act(() => result.current.mutateAsync({ id: 'p1', input: { name: 'X' } as never }))
+
+    expect(qc.getQueryState(['recompetes', 1])?.isInvalidated).toBe(true)
+  })
 })
 
 describe('useToggleSaved cache invalidation', () => {

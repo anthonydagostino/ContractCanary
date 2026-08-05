@@ -95,6 +95,19 @@ describe('formatMoney', () => {
     expect(formatMoney(undefined)).toBe('—')
     expect(formatMoney(NaN)).toBe('—')
   })
+
+  it('puts the sign outside the currency symbol for deobligations', () => {
+    // Award data legitimately contains negative (deobligated) amounts.
+    expect(formatMoney(-2_100_000)).toBe('-$2.1M')
+    expect(formatMoney(-1500)).toBe('-$1.5K')
+    expect(formatMoney(-980)).toBe('-$980')
+  })
+
+  it('promotes units at rounding boundaries instead of showing $1000M', () => {
+    expect(formatMoney(999_999_999)).toBe('$1B')
+    expect(formatMoney(999_999.9)).toBe('$1M')
+    expect(formatMoney(999_499)).toBe('$999K')
+  })
 })
 
 describe('deadlineTile', () => {

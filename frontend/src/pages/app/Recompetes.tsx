@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
 import { PageHeader } from '../../components/PageHeader'
 import { Badge, EmptyState, PageLoader, Pagination } from '../../components/ui'
 import { useRecompetes } from '../../hooks/queries'
@@ -11,7 +12,18 @@ export function Recompetes() {
   const { me } = useAuth()
   const [page, setPage] = useState(1)
   const entitled = !!me?.limits.canSeeRecompetes
-  const { data, isLoading, isError, refetch } = useRecompetes(page, entitled)
+  const { data, isLoading, isError, isFetching, error, refetch } = useRecompetes(page, entitled)
+
+  // If the result set shrinks between requests (daily award refresh, profile
+  // edit), a now-out-of-range page would render an empty page with no
+  // pagination control to escape from — clamp back into range.
+  useEffect(() => {
+    if (data && data.totalPages > 0 && page > data.totalPages) setPage(data.totalPages)
+  }, [data, page])
+
+  // Entitlement can lapse mid-session (trial/grace expiry); the server then
+  // answers 402 and the right response is the upgrade pitch, not an error.
+  const lapsed = isError && axios.isAxiosError(error) && error.response?.status === 402
 
   return (
     <div>
@@ -20,7 +32,7 @@ export function Recompetes() {
         subtitle="Incumbent contracts in your NAICS codes that expire soon — agencies typically rebid 12–18 months before the end date, so these are tomorrow's opportunities before they're posted."
       />
 
-      {!entitled ? (
+      {!entitled || lapsed ? (
         <UpsellCard />
       ) : isLoading ? (
         <PageLoader />
@@ -43,11 +55,15 @@ export function Recompetes() {
           <p className="text-sm text-slate-500">
             {data.total.toLocaleString()} expiring incumbent contract{data.total === 1 ? '' : 's'} in your codes, soonest first.
             Source: USAspending.gov (public award data).
+            {isFetching && <span className="text-slate-300"> · updating…</span>}
           </p>
           <div className="space-y-3">
             {data.items.map((r) => <RecompeteCard key={r.awardId} item={r} />)}
           </div>
-          <Pagination page={data.page} totalPages={data.totalPages} onChange={setPage} />
+          {/* Drive pagination from local state: placeholderData shows the previous
+              page's payload during a transition, and its stale echoed page number
+              would let a double-click re-request the same page. */}
+          <Pagination page={page} totalPages={data.totalPages} onChange={setPage} />
         </div>
       )}
     </div>

@@ -4,7 +4,7 @@ import { Alert, Badge, Spinner } from '../../components/ui'
 import { useChangePassword, useCheckout, useDeleteAccount, useExportData, usePortal, useUpdateAccount } from '../../hooks/queries'
 import { useAuth } from '../../lib/auth'
 import { apiError } from '../../lib/api'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { branding } from '../../config/branding'
 import { formatDate } from '../../lib/format'
 import type { PlanTier } from '../../lib/types'
@@ -23,12 +23,24 @@ export function Settings() {
   const [form, setForm] = useState({ fullName: '', companyName: '', timeZoneId: 'America/New_York' })
   const [savedMsg, setSavedMsg] = useState('')
   const [saveError, setSaveError] = useState('')
+  const [searchParams] = useSearchParams()
+  const checkoutReturn = searchParams.get('checkout')
   const [billingError, setBillingError] = useState('')
   const [renewalConsent, setRenewalConsent] = useState(false)
 
   useEffect(() => {
     if (me) setForm({ fullName: me.fullName ?? '', companyName: me.companyName ?? '', timeZoneId: me.timeZoneId })
   }, [me])
+
+  // Back from Stripe checkout: the plan is mirrored via webhook, which can land
+  // a few seconds after the redirect. Refresh the session a few times so the
+  // freshly-paid user sees their plan flip without a manual reload.
+  useEffect(() => {
+    if (checkoutReturn !== 'success') return
+    const timers = [1500, 4000, 8000].map((ms) => setTimeout(() => { void refreshMe() }, ms))
+    return () => timers.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkoutReturn])
 
   if (!me) return null
 
@@ -119,6 +131,7 @@ export function Settings() {
           )}
         </div>
 
+        {checkoutReturn === 'success' && <Alert tone="green">Checkout complete — your subscription updates here within a few seconds.</Alert>}
         {billingError && <Alert>{billingError}</Alert>}
 
         {me.plan !== 'Pro' && (

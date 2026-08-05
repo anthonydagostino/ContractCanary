@@ -52,14 +52,28 @@ export function deadlineLabel(iso?: string | null, now: Date = new Date()): { te
   return { text: `${days} days left`, tone: 'green' }
 }
 
-/** Compact USD for contract values: $1.2M, $450K, $980. Null-safe. */
+/**
+ * Compact USD for contract values: $1.2M, $450K, -$2.1M, $980. Null-safe.
+ * Negative amounts are real in award data (deobligations), and rounding must
+ * promote units ($999,999,999 is $1B, not $1000M).
+ */
 export function formatMoney(amount?: number | null): string {
   if (amount == null || isNaN(amount)) return '—'
-  const abs = Math.abs(amount)
-  if (abs >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`
-  if (abs >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (abs >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`
-  return `$${amount.toFixed(0)}`
+  const sign = amount < 0 ? '-' : ''
+  let v = Math.abs(amount)
+  if (v < 1000) return `${sign}$${v.toFixed(0)}`
+  const suffixes = ['K', 'M', 'B', 'T']
+  let i = -1
+  while (v >= 1000 && i < suffixes.length - 1) {
+    v /= 1000
+    i++
+  }
+  let s = v >= 100 ? v.toFixed(0) : v.toFixed(1).replace(/\.0$/, '')
+  if (s === '1000' && i < suffixes.length - 1) {
+    s = '1'
+    i++
+  }
+  return `${sign}$${s}${suffixes[i]}`
 }
 
 /** Split a deadline label into the big-number tile used by the deadline tracker. */

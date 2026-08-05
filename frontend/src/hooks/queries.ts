@@ -37,6 +37,8 @@ export function useSaveProfile() {
       // Without this, re-opening the editor within staleTime shows pre-save values.
       qc.invalidateQueries({ queryKey: ['profile'] })
       qc.invalidateQueries({ queryKey: ['notices'] })
+      // Recompete results derive from the profiles' NAICS codes.
+      qc.invalidateQueries({ queryKey: ['recompetes'] })
     },
   })
 }
@@ -45,7 +47,10 @@ export function useDeleteProfile() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => api.delete(`/profiles/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profiles'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profiles'] })
+      qc.invalidateQueries({ queryKey: ['recompetes'] })
+    },
   })
 }
 
