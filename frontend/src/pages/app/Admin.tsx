@@ -24,6 +24,32 @@ export function Admin() {
     }
   }
 
+  async function sendMyDigest() {
+    setBusy(true); setMsg(''); setError('')
+    try {
+      const { data } = await api.post('/admin/digest/send-me')
+      setMsg(data.sent
+        ? 'Digest sent — check your inbox (and the spam folder on a first send).'
+        : 'Nothing to send: you have no un-notified matches, alerts, or upcoming deadlines right now.')
+    } catch (err) {
+      setError(apiError(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function runAwardIngest() {
+    setBusy(true); setMsg(''); setError('')
+    try {
+      const { data } = await api.post('/admin/awards/ingest')
+      setMsg(`Award pull done: ${data.awardsUpserted} awards across ${data.codesProcessed} codes (${data.codesFailed} failed).`)
+    } catch (err) {
+      setError(apiError(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (isLoading || !m) return <PageLoader />
 
   const stats: { label: string; value: string | number; hint?: string }[] = [
@@ -42,7 +68,13 @@ export function Admin() {
       <PageHeader
         title="Admin"
         subtitle="Operational metrics for the platform."
-        action={<button type="button" className="btn-secondary" onClick={runIngest} disabled={busy}>{busy ? <Spinner className="h-4 w-4" /> : 'Run ingest now'}</button>}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-ghost" onClick={sendMyDigest} disabled={busy}>Email me my digest</button>
+            <button type="button" className="btn-ghost" onClick={runAwardIngest} disabled={busy}>Pull awards now</button>
+            <button type="button" className="btn-secondary" onClick={runIngest} disabled={busy}>{busy ? <Spinner className="h-4 w-4" /> : 'Run ingest now'}</button>
+          </div>
+        }
       />
 
       {msg && <div className="mb-4"><Alert tone="green">{msg}</Alert></div>}
