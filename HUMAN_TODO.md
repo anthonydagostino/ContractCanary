@@ -33,13 +33,14 @@ automatic backups (~$15/mo, see the backups item below).
 
 ---
 
-## 📍 Where you are right now (updated Aug 4, 2026)
+## 📍 Where you are right now (updated Aug 5, 2026)
 
 **Already knocked out — no action needed:**
 - ✅ Domain + Cloudflare DNS, live site with HTTPS at contract-canary.com
 - ✅ Server deployed (DigitalOcean droplet, Docker Compose stack)
-- ✅ **Auto-deploy pipeline is live**: every push runs the full test suite
-  (219 backend + 38 frontend tests) and deploys to the droplet only when green
+- ✅ **Auto-deploy pipeline is live and proven**: every push runs the full test
+  suite (285 tests: backend unit + integration + frontend) and deploys to the
+  droplet only when green — you never redeploy by hand
 - ✅ SAM.gov API key — **real opportunity data is live** (`INGEST_SOURCE=Sam`)
 - ✅ Admin account promoted (your email) — Admin page with metrics works
 - ✅ Strong JWT signing key set (rotated after the earlier screenshot leak)
@@ -48,79 +49,56 @@ automatic backups (~$15/mo, see the backups item below).
   Privacy Policy, site footer, and email templates)
 - ✅ Postmark server created, sending DNS (DKIM/Return-Path) verified, server token
   in hand — *only the account approval is still pending on Postmark's side*
-- ✅ **Full bug sweep (Aug 4)**: two review passes over the whole codebase found and
-  fixed 30+ real bugs — the biggest were digests marking notifications "sent" even
-  when the email failed, broad NAICS codes (like "54") silently never matching,
-  deadline labels off by a day, and posted dates showing one day early. All fixed
-  with regression tests; the next auto-deploy ships them.
+- ✅ **Stripe is live end-to-end (Aug 5)**: account activated, $29/$79 products,
+  webhook delivering (the earlier checkout error was a pasted `prod_` ID instead
+  of `price_` — fixed), and you completed a real checkout that flipped your plan
+  to Pro. Checkout now collects the card at subscribe time ($0 due today, first
+  charge at trial end).
+- ✅ **Legal names filled in**: Terms/Privacy name "Anthony D'Agostino, doing
+  business as ContractCanary", New Jersey governing law.
+- ✅ **Recompete Radar shipped (Aug 5)** — the Pro headline feature — plus
+  "Get in early" badges on pre-RFP notices, a marketing-site spotlight for it,
+  and a same-day hardening sweep (two review passes, 12 more fixes, all tested).
+- ✅ **Full bug sweep (Aug 4)**: 30+ real bugs found and fixed with regression
+  tests (digest send-failure stamping, broad NAICS codes never matching,
+  deadline labels off by a day, and more). All live.
 
 **Still to do, in the order I'd do them:**
 
-1. **Redeploy the server to pick up everything new.** A lot has shipped since your
-   last deploy (alerts, deadline reminders, security hardening, legal docs, data
-   rights, unsubscribe). While you're in the `.env`, add these lines, then redeploy:
-   ```
-   SEED_DEMO=false
-   ADMIN_EMAILS=your-email@wherever.com     # the account you registered in the app
-   BRANDING_POSTAL_ADDRESS=your mailing address, city, ST zip
-   ```
-   Then either run `cd /opt/ContractCanary && git pull && docker compose -f docker-compose.server.yml up -d --build`
-   — or better, do the **auto-deploy setup below first** and let the pipeline deploy for you.
-   This redeploy also auto-locks the old demo admin account (Part 11) — watch the api
-   logs for the `SECURITY: locked seeded default account` line.
-
-   **⚙️ Auto-deploy (CI/CD) — one-time setup, ~5 minutes, then you never redeploy by hand again.**
-   A GitHub Actions pipeline now runs the full test suite + builds on every push, and
-   when everything is green it deploys to your droplet automatically. It just needs
-   permission to reach your server once:
-
-   a. In the droplet console (same place you edit `.env`), create a deploy key:
-      ```
-      ssh-keygen -t ed25519 -f /root/deploy_key -N "" -C "github-deploy"
-      cat /root/deploy_key.pub >> /root/.ssh/authorized_keys
-      cat /root/deploy_key
-      ```
-      Copy the entire output of that last command (from `-----BEGIN` to `END...-----`),
-      then delete the files: `rm /root/deploy_key /root/deploy_key.pub`
-   b. On GitHub: your repo → **Settings → Secrets and variables → Actions → New
-      repository secret**. Create three secrets:
-      - `DEPLOY_HOST` = `157.230.209.165`
-      - `DEPLOY_USER` = `root`
-      - `DEPLOY_SSH_KEY` = the private key you copied in (a)
-      (Treat that key like a password — it's root access to your server. GitHub
-      stores secrets encrypted and never shows them again.)
-   c. Trigger it: GitHub → **Actions** tab → **Test & Deploy** → **Run workflow**.
-      Watch it go green: backend tests → frontend build → deploy.
-
-   From then on, **every push deploys itself** — and only if all ~200 tests pass, so
-   a red test suite can never reach your live site. Until the secrets exist, the
-   pipeline still runs tests on every push and just skips the deploy step with a note.
-2. **Postmark — when the approval email arrives:** set `POSTMARK_SERVER_TOKEN=...`
+1. **Postmark — when the approval email arrives:** set `POSTMARK_SERVER_TOKEN=...`
    and `EMAIL_PROVIDER=Postmark` in `.env`, put the **digest on a "Broadcast" message
-   stream** (verification/receipts on Transactional), redeploy, and send yourself a
-   test digest. (Part 5 + item 4 in the compliance section below.)
-3. **Stripe** (Part 4): ✅ account activated, products created ($29/$79), webhook set,
-   keys in `.env`. **Remaining:** fix the checkout error currently under
-   investigation, turn on **email receipts** (Settings → Emails → "Successful
-   payments"), and confirm **cancel subscription** is allowed in the Customer Portal.
-4. ~~Company/legal details~~ ✅ Done — Terms/Privacy now name
-   "Anthony D'Agostino, doing business as ContractCanary", New Jersey governing law.
-5. **Lawyer pass** over `/terms` and `/privacy`, then remove the "pending legal
-   review" banner (Part 12).
-6. **Uptime monitor (~5 min, free).** uptimerobot.com → create free account →
+   stream** (verification/receipts on Transactional), restart, and send yourself a
+   test digest. (Part 5 + item 4 in the compliance section below.) While you're in
+   `.env`, also set `BRANDING_POSTAL_ADDRESS=your mailing address` — the digest
+   footer legally needs it (a PO box or virtual mailbox is fine).
+2. **Stripe wrap-up (~10 min in the dashboard):**
+   - Turn on **email receipts**: Settings → Customer emails → "Successful payments".
+   - Confirm **cancel subscription** is allowed in the Customer Portal.
+   - Settings → Billing → Subscriptions and emails → trials ending **without** a
+     payment method → set to **Cancel subscription** (dead-man's switch).
+   - **Your own test subscription has no card on file and "renews" Aug 18** —
+     either cancel it from Manage billing before then, or add a card if you want
+     to stay your own first Pro customer ($79 charge on the 18th).
+   - Optional: re-test subscribe once to see the new card-at-checkout flow
+     ("$0 due today, then $79/mo starting <trial end>").
+3. **Uptime monitor (~5 min, free).** uptimerobot.com → create free account →
    Add monitor → HTTP(s) → `https://contract-canary.com/health` → 5-minute interval.
    Emails you the moment the site stops responding.
-7. **Server backups (~2 min, ~$1–2/mo).** DigitalOcean panel → your droplet →
+4. **Server backups (~2 min, ~$1–2/mo).** DigitalOcean panel → your droplet →
    **Backups** tab → Enable backups (weekly snapshots). This is the minimum safety
    net — the database lives on that box. Backups are the one existential item on
    this list — don't launch marketing pushes without them. Once there are paying
    customers, upgrade to a managed Postgres (daily backups + point-in-time restore,
    ~$15/mo; the app already supports an external database) and do one *tested*
    restore.
+5. **Turn on AI summaries** (`AI_ENABLED=true` + `ANTHROPIC_API_KEY` in `.env`) —
+   they're advertised on the marketing site's comparison table, so make it true
+   before real visitors arrive. Costs pennies per notice. (See the AI part below.)
+6. **Lawyer pass** over `/terms` and `/privacy`, then remove the "pending legal
+   review" banner (Part 12).
 
-*Optional while you wait on Postmark/Stripe:* add a `privacy@` forward in Cloudflare
-Email Routing (30 seconds, same screen as support@), and turn on AI summaries
-(`AI_ENABLED=true` + an Anthropic key — see the AI part below).
+*Optional while you wait on Postmark:* add a `privacy@` forward in Cloudflare
+Email Routing (30 seconds, same screen as support@).
 
 **When you're ready to go get users:** the complete plan — channels, costs,
 phases, and what to ask engineering for — lives in **GROWTH_STRATEGY.md**.
@@ -129,10 +107,10 @@ phases, and what to ask engineering for — lives in **GROWTH_STRATEGY.md**.
 
 ## Feature status — what's built, and what each needs
 
-Engineering keeps this table current. **"Built"** means the code is done, tested, and
-on the live server after your next redeploy (`git pull` + `docker compose -f
-docker-compose.server.yml up -d --build`). Some features stay **dormant** until you
-add a key — exactly like the SAM and email switches — so they never risk the live app.
+Engineering keeps this table current. **"Built"** means the code is done, tested,
+and deployed — the pipeline ships every green push to the live server
+automatically. Some features stay **dormant** until you add a key — exactly like
+the SAM and email switches — so they never risk the live app.
 
 | Feature | Status | To switch on |
 |---|---|---|
